@@ -8,6 +8,7 @@ pub mod covers;
 pub mod db;
 pub mod error;
 pub mod inkult;
+pub mod inkult_index;
 pub mod library;
 pub mod security;
 pub mod state;

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT t.id AS \"id!\", t.title, t.artist_name, t.album_id, al.title AS album_title,\n                  al.artist_id AS album_artist_id, t.disc_no, t.track_no, t.duration_ms, t.codec,\n                  t.sample_rate, t.bit_depth, t.channels, t.bitrate_kbps,\n                  t.lossless AS \"lossless: bool\"\n           FROM tracks t JOIN albums al ON al.id = t.album_id\n           WHERE t.album_id = ?\n           ORDER BY COALESCE(t.disc_no, 1), t.track_no, t.title",
+  "query": "SELECT t.id AS \"id!\", t.title, t.artist_name, t.album_id, al.title AS album_title,\n                  al.artist_id AS album_artist_id, t.disc_no, t.track_no, t.duration_ms, t.codec,\n                  t.sample_rate, t.bit_depth, t.channels, t.bitrate_kbps,\n                  t.lossless AS \"lossless: bool\"\n           FROM search_fts f\n           JOIN tracks t ON t.id = f.ref_id\n           JOIN albums al ON al.id = t.album_id\n           WHERE search_fts MATCH ?1 AND f.kind = 'track' AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))\n           ORDER BY f.rank LIMIT ?2",
   "describe": {
     "columns": [
       {
@@ -80,10 +80,10 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 3
     },
     "nullable": [
-      true,
+      false,
       false,
       false,
       false,
@@ -100,5 +100,5 @@
       false
     ]
   },
-  "hash": "e364f2e2fce868b77c1621a480f7841941b669da3e13ccaf09c7fcd453a1d122"
+  "hash": "6e3371a599560bafa8373844285862106127e4e02ee957add636087a915168aa"
 }

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) AS \"n!: i64\" FROM albums al\n           WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1)))",
+  "describe": {
+    "columns": [
+      {
+        "name": "n!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5d0507b81004dde880a89c472ebf411c48cbf8ea7f6fdc715437ca75cae4d6b1"
+}

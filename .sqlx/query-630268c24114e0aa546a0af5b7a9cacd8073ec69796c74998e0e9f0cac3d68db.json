@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT al.cover_path, t.path AS \"track_path?\", t.mtime AS \"track_mtime?\"\n           FROM albums al LEFT JOIN tracks t ON t.id = al.cover_track_id\n           WHERE al.id = ?1\n             AND EXISTS (SELECT 1 FROM tracks v WHERE v.album_id = al.id AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = v.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = v.path AND ko.owner_id = ?2)))",
+  "describe": {
+    "columns": [
+      {
+        "name": "cover_path",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "track_path?",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "track_mtime?",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "630268c24114e0aa546a0af5b7a9cacd8073ec69796c74998e0e9f0cac3d68db"
+}

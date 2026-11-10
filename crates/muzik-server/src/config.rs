@@ -24,6 +24,12 @@ pub struct Config {
     pub trusted_proxies: Vec<IpNet>,
     /// Maximum number of ffmpeg processes running at once.
     pub max_transcodes: usize,
+    /// Inkult's `library.json` (who owns which file), for separate libraries
+    /// per Inkult account. `None` = not available.
+    pub inkult_library: Option<PathBuf>,
+    /// Where Inkult's music folder is in Muzik's file system: the paths in
+    /// Inkult's index are relative to it. Defaults to the first library root.
+    pub inkult_music_dir: Option<PathBuf>,
 }
 
 impl Config {
@@ -86,8 +92,17 @@ impl Config {
             ffmpeg: env_or("MUZIK_FFMPEG", "ffmpeg").into(),
             trusted_proxies,
             max_transcodes: max_transcodes.max(1),
+            inkult_library: non_empty_env("MUZIK_INKULT_LIBRARY").map(PathBuf::from),
+            inkult_music_dir: non_empty_env("MUZIK_INKULT_MUSIC_DIR").map(PathBuf::from),
         })
     }
+}
+
+fn non_empty_env(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .map(|v| v.trim().to_owned())
+        .filter(|v| !v.is_empty())
 }
 
 fn env_or(key: &str, default: &str) -> String {

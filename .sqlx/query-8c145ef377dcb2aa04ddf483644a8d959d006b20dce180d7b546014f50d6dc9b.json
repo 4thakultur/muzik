@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO inkult_files (path) VALUES (?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "8c145ef377dcb2aa04ddf483644a8d959d006b20dce180d7b546014f50d6dc9b"
+}

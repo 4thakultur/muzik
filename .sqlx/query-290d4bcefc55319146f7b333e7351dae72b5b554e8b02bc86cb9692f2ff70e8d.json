@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE server_settings SET inkult_separate_libraries = ? WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "290d4bcefc55319146f7b333e7351dae72b5b554e8b02bc86cb9692f2ff70e8d"
+}

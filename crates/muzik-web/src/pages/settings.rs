@@ -1019,7 +1019,7 @@ fn InkultPanel() -> impl IntoView {
     let current = move || InkultSettings {
         enabled: enabled.get_untracked(),
         url: url.get_untracked(),
-        insecure: false,
+        ..Default::default()
     };
     let toggle_enabled = move |ev: leptos::ev::MouseEvent| {
         // The switch only moves once the server agrees.
@@ -1081,6 +1081,30 @@ fn InkultPanel() -> impl IntoView {
     };
     let needs_code = move || auth.user().is_some_and(|u| u.totp_enabled && !u.inkult);
 
+    // Separate libraries: saved on its own, no confirmation needed (it only
+    // narrows what Inkult users see).
+    let separate = move || saved.with(|s| s.as_ref().is_some_and(|s| s.separate_libraries));
+    let index = move || saved.with(|s| s.as_ref().and_then(|s| s.library_index.clone()));
+    let toggle_separate = move |ev: leptos::ev::MouseEvent| {
+        ev.prevent_default();
+        let on = !separate();
+        busy.set(true);
+        spawn_local(async move {
+            match api::set_inkult_libraries(on).await {
+                Ok(s) => {
+                    show(s);
+                    toasts.show(if on {
+                        "Each Inkult user now hears only their own songs"
+                    } else {
+                        "Everyone hears the whole library"
+                    });
+                }
+                Err(e) => toasts.show(e.message),
+            }
+            busy.set(false);
+        });
+    };
+
     view! {
         <h3 class="group-header">"Inkult"</h3>
         <form class="group" on:submit=submit_url>
@@ -1138,6 +1162,28 @@ fn InkultPanel() -> impl IntoView {
             "When on, every Inkult user can use Muzik: they sign in with their Inkult handle and password "
             "(and two-factor login), and their Muzik account is created the first time. "
             "If Muzik reaches Inkult by a host name (e.g. inkult in Docker), add it to INKULT_ALLOWED_HOSTS on the Inkult server."
+        </p>
+        <div class="group">
+            <label class="cell"><span class="cell-label">"Separate Libraries"</span>
+                <input class="switch" type="checkbox" role="switch"
+                    disabled=move || busy.get() || loading() || (index().is_none() && !separate())
+                    prop:checked=separate
+                    on:click=toggle_separate/></label>
+            {move || index().map(|i| {
+                let found = format!("{} of {} songs from Inkult found in the library", i.matched, i.files);
+                view! {
+                    <div class="cell"><span class="cell-sub">{found}</span></div>
+                    {i.error.map(|e| view! { <div class="cell"><p class="error" role="alert">{e}</p></div> })}
+                }
+            })}
+        </div>
+        <p class="group-footer">
+            {move || if index().is_some() {
+                "When on, each Inkult user only hears the songs they own in Inkult, plus songs added to the \
+                 music folder by hand. Inkult captains, Muzik admins and accounts with a Muzik password hear everything."
+            } else {
+                "Needs Inkult's library.json: mount Inkult's data folder read-only and set MUZIK_INKULT_LIBRARY."
+            }}
         </p>
     }
 }

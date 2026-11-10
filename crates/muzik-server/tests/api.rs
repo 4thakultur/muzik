@@ -54,6 +54,8 @@ async fn setup() -> TestApp {
         ffmpeg: "ffmpeg".into(),
         trusted_proxies: Vec::new(),
         max_transcodes: 2,
+        inkult_library: Some(data.path().join("inkult/library.json")),
+        inkult_music_dir: None,
     };
     std::fs::create_dir_all(&config.data_dir).unwrap();
     let pool = db::connect(&config.data_dir.join("muzik.db"))
@@ -1423,14 +1425,17 @@ async fn admin_can_require_two_factor() {
 
 /// A stand-in for an Inkult server's sign-in API, on a random local port.
 /// Accounts (handle → id, password, 2FA code): `pirate` (42, no 2FA),
-/// `captain` (7, code 123456), `temp` (9, temporary password), `admin` (99).
+/// `captain` (7, code 123456), `temp` (9, temporary password), `admin` (99),
+/// `bosun` (43, no 2FA), `quartermaster` (8, no 2FA). 7 and 8 are Inkult
+/// captains (administrators), the others pirates.
 async fn fake_inkult() -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
     use axum::{routing::post, Json};
     use std::sync::{atomic::AtomicUsize, Arc};
     let logouts = Arc::new(AtomicUsize::new(0));
     let account = |id: i64, name: &str, two_factor: bool, change: bool| {
         json!({
-            "id": id, "username": name, "role": "pirate", "created_at": 0,
+            "id": id, "username": name, "created_at": 0,
+            "role": if matches!(id, 7 | 8) { "captain" } else { "pirate" },
             "two_factor_enabled": two_factor, "password_temporary": change,
             "password_change_required": change, "two_factor_enrollment_required": false,
         })
@@ -1468,6 +1473,10 @@ async fn fake_inkult() -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize
                     .into_response(),
                     ("temp", "temporary") => signed_in(account(9, "temp", false, true)),
                     ("admin", "inkultpw") => signed_in(account(99, "admin", false, false)),
+                    ("bosun", "aye-aye-aye") => signed_in(account(43, "bosun", false, false)),
+                    ("quartermaster", "ration-the-rum") => {
+                        signed_in(account(8, "quartermaster", false, false))
+                    }
                     _ => (StatusCode::UNAUTHORIZED, Json(json!({ "error": "wrong" }))).into_response(),
                 }
             }),
@@ -1789,4 +1798,242 @@ async fn sign_in_with_inkult() {
         inkult_login(&t, "captain", "seaworthy").await.status(),
         StatusCode::UNAUTHORIZED
     );
+}
+
+// ---------- Separate libraries per Inkult account ----------
+
+/// Writes Inkult's `library.json` (as Inkult does: temp file + rename).
+fn write_inkult_index(t: &TestApp, body: &str) {
+    let path = t.state.config.inkult_library.clone().unwrap();
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, body).unwrap();
+    std::fs::rename(tmp, path).unwrap();
+}
+
+fn inkult_index(entries: &[(&str, &[u64])]) -> String {
+    let entries: Vec<Value> = entries
+        .iter()
+        .map(|(path, owners)| {
+            json!({
+                "key": {"provider": "youtube", "id": path},
+                "path": path, "title": "x", "artists": [], "album": null,
+                "source_url": "https://example.com", "artwork_url": null,
+                "quality": {}, "output": "original", "added_at": 1,
+                "owners": owners,
+            })
+        })
+        .collect();
+    json!({ "version": 1, "entries": entries }).to_string()
+}
+
+#[tokio::test]
+async fn separate_inkult_libraries() {
+    let t = setup().await;
+    let admin = admin_session(&t).await;
+    t.state.scanner.run_blocking(ScanMode::Incremental).await;
+    let (url, _) = fake_inkult().await;
+    sqlx::query("UPDATE server_settings SET inkult_enabled = 1, inkult_url = ? WHERE id = 1")
+        .bind(url.trim_end_matches('/'))
+        .execute(&t.state.pool)
+        .await
+        .unwrap();
+    let sign_in = |name: &'static str, password: &'static str| {
+        let t = &t;
+        async move {
+            let res = inkult_login(t, name, password).await;
+            assert_eq!(res.status(), StatusCode::OK, "{name} signs in");
+            session_cookie(&res)
+        }
+    };
+    let pirate = sign_in("pirate", "arrrrrrr").await; // Inkult id 42
+    let bosun = sign_in("bosun", "aye-aye-aye").await; // 43
+    let captain = sign_in("quartermaster", "ration-the-rum").await; // 8, captain
+
+    // Track ids, as the admin sees them.
+    let albums: Page<Album> = t.json("/api/albums", &admin).await;
+    let first = albums
+        .items
+        .iter()
+        .find(|a| a.title == "First Album")
+        .unwrap();
+    let detail: AlbumDetail = t.json(&format!("/api/albums/{}", first.id), &admin).await;
+    let id_of = |title: &str| detail.tracks.iter().find(|t| t.title == title).unwrap().id;
+    let (opening, second) = (id_of("Opening"), id_of("Second Song"));
+
+    let visible = |cookie: String| {
+        let t = &t;
+        async move {
+            let albums: Page<Album> = t.json("/api/albums?limit=500", &cookie).await;
+            let mut titles = Vec::new();
+            for a in albums.items {
+                let d: AlbumDetail = t.json(&format!("/api/albums/{}", a.id), &cookie).await;
+                assert_eq!(d.album.track_count, d.tracks.len() as i64);
+                titles.extend(d.tracks.into_iter().map(|t| t.title));
+            }
+            titles.sort();
+            titles
+        }
+    };
+    let everything = vec!["03 Untagged", "Opening", "Second Song"];
+    // Off by default: everyone sees the whole library.
+    assert_eq!(visible(pirate.clone()).await, everything);
+
+    let separate = |on: bool| {
+        let (t, admin) = (&t, admin.clone());
+        async move {
+            let res = t
+                .request(
+                    "PUT",
+                    "/api/admin/inkult/libraries",
+                    Some(&admin),
+                    Some(json!({ "separate": on })),
+                    &[],
+                )
+                .await;
+            (res.status(), body_json(res).await)
+        }
+    };
+    // Admins only; refused while Inkult's index can't be read.
+    let res = t
+        .request(
+            "PUT",
+            "/api/admin/inkult/libraries",
+            Some(&pirate),
+            Some(json!({ "separate": true })),
+            &[],
+        )
+        .await;
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    let (s, _) = separate(true).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    // An index whose files aren't in the library (wrong mount) is refused too:
+    // every song would look hand-added and stay shared.
+    write_inkult_index(&t, &inkult_index(&[("Elsewhere/x.flac", &[42])]));
+    let (s, body) = separate(true).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{body}");
+
+    // Opening is the pirate's, Second Song the bosun's; the untagged WAV was
+    // copied in by hand (not in Inkult's index), so it is shared.
+    write_inkult_index(
+        &t,
+        &inkult_index(&[
+            ("Test Artist/First Album/01 - Opening.flac", &[42]),
+            ("Test Artist/First Album/02 - Second Song.mp3", &[43]),
+            ("Somewhere/Deleted.flac", &[42, 43]),
+        ]),
+    );
+    let (s, body) = separate(true).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    assert_eq!(body["separate_libraries"], true);
+    assert_eq!(body["library_index"]["files"], 3);
+    assert_eq!(body["library_index"]["matched"], 2);
+
+    assert_eq!(visible(pirate.clone()).await, ["03 Untagged", "Opening"]);
+    assert_eq!(visible(bosun.clone()).await, ["03 Untagged", "Second Song"]);
+    // Inkult captains and Muzik admins see everything, as in Inkult.
+    assert_eq!(visible(captain.clone()).await, everything);
+    assert_eq!(visible(admin.clone()).await, everything);
+
+    // Someone else's song: not streamable, not found, not searchable.
+    let status = |uri: String, cookie: String| {
+        let t = &t;
+        async move {
+            t.request("GET", &uri, Some(&cookie), None, &[])
+                .await
+                .status()
+        }
+    };
+    for uri in [
+        format!("/api/stream/{second}"),
+        format!("/api/tracks/{second}"),
+        format!("/api/tracks/{second}/suggestions"),
+    ] {
+        assert_eq!(
+            status(uri.clone(), pirate.clone()).await,
+            StatusCode::NOT_FOUND,
+            "{uri}"
+        );
+        assert_eq!(status(uri, bosun.clone()).await, StatusCode::OK);
+    }
+    assert_eq!(
+        status(format!("/api/stream/{opening}"), pirate.clone()).await,
+        StatusCode::OK
+    );
+    let found: SearchResults = t.json("/api/search?q=second", &pirate).await;
+    assert!(found.tracks.is_empty());
+    let found: SearchResults = t.json("/api/search?q=second", &bosun).await;
+    assert_eq!(found.tracks.len(), 1);
+    let suggested: Vec<Track> = t
+        .json(&format!("/api/tracks/{opening}/suggestions"), &pirate)
+        .await;
+    assert!(suggested.iter().all(|s| s.id != second));
+
+    // Playlists: songs outside your library can't be added, and show as
+    // unavailable in someone else's shared playlist.
+    let res = t
+        .request(
+            "POST",
+            "/api/playlists",
+            Some(&pirate),
+            Some(json!({"name": "Mine", "track_ids": [second]})),
+            &[],
+        )
+        .await;
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let res = t
+        .request(
+            "POST",
+            "/api/playlists",
+            Some(&admin),
+            Some(json!({"name": "Both", "track_ids": [opening, second]})),
+            &[],
+        )
+        .await;
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let shared: PlaylistSummary =
+        serde_json::from_slice(&res.into_body().collect().await.unwrap().to_bytes()).unwrap();
+    let res = t
+        .request(
+            "PATCH",
+            &format!("/api/playlists/{}", shared.id),
+            Some(&admin),
+            Some(json!({"public": true})),
+            &[],
+        )
+        .await;
+    assert!(res.status().is_success());
+    let seen: PlaylistDetail = t
+        .json(&format!("/api/playlists/{}", shared.id), &pirate)
+        .await;
+    let available: Vec<Option<i64>> = seen
+        .entries
+        .iter()
+        .map(|e| e.track.as_ref().map(|t| t.id))
+        .collect();
+    assert_eq!(available, [Some(opening), None]);
+
+    // Ownership follows Inkult without a rescan: the pirate downloads the
+    // bosun's song too (Inkult only adds an owner).
+    write_inkult_index(
+        &t,
+        &inkult_index(&[
+            ("Test Artist/First Album/01 - Opening.flac", &[42]),
+            ("Test Artist/First Album/02 - Second Song.mp3", &[43, 42]),
+        ]),
+    );
+    t.state.inkult_index.sync(false).await.unwrap();
+    assert_eq!(visible(pirate.clone()).await, everything);
+
+    // A broken index keeps the previous copy instead of opening everything up.
+    write_inkult_index(&t, "{ not json");
+    assert!(t.state.inkult_index.sync(false).await.is_err());
+    assert_eq!(visible(bosun.clone()).await, ["03 Untagged", "Second Song"]);
+    let settings: Value = t.json("/api/admin/inkult", &admin).await;
+    assert!(settings["library_index"]["error"].is_string());
+
+    // Off again: everyone sees everything.
+    let (s, _) = separate(false).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(visible(bosun).await, everything);
 }

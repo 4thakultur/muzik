@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT ar.id AS \"id!\", ar.name,\n                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id\n                     AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))))\n                    AS \"album_count!: i64\"\n           FROM search_fts f JOIN artists ar ON ar.id = f.ref_id\n           WHERE search_fts MATCH ?1 AND f.kind = 'artist'\n             AND EXISTS (SELECT 1 FROM albums al JOIN tracks t ON t.album_id = al.id\n                         WHERE al.artist_id = ar.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3)))\n           ORDER BY f.rank LIMIT ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "87321566d96b0834e60bec7dea7919dc93c98ce9bacb7212c35b0ee0283d938f"
+}

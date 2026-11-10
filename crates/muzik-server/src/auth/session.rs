@@ -154,6 +154,11 @@ pub struct CurrentUser {
     pub totp_setup_pending: bool,
     /// Signs in through Inkult: no Muzik password or 2FA to manage.
     pub inkult: bool,
+    /// Separate libraries: the Inkult account id whose songs this user may
+    /// see (plus songs not in Inkult's index). `None` = the whole library:
+    /// separation off, a local account, a Muzik admin or an Inkult captain.
+    /// Every library query passes it to its ownership predicate.
+    pub library_owner: Option<i64>,
 }
 
 impl CurrentUser {
@@ -174,7 +179,11 @@ impl CurrentUser {
                             ELSE u.totp_secret IS NULL END
                        AND (u.totp_required <> 0
                         OR (SELECT require_totp FROM server_settings WHERE id = 1) <> 0))
-                        AS "totp_setup_pending!: bool"
+                        AS "totp_setup_pending!: bool",
+                      -- -1 (owns nothing) for an Inkult account not linked yet.
+                      CASE WHEN u.auth_provider = 'inkult' AND u.is_admin = 0 AND u.inkult_captain = 0
+                                AND (SELECT inkult_separate_libraries FROM server_settings WHERE id = 1) <> 0
+                           THEN COALESCE(u.inkult_user_id, -1) END AS "library_owner?: i64"
                FROM sessions s JOIN users u ON u.id = s.user_id
                WHERE s.id = ? AND s.expires_at > ? AND u.disabled = 0"#,
             id,
@@ -203,6 +212,7 @@ impl CurrentUser {
             session_id: id,
             totp_setup_pending: row.totp_setup_pending,
             inkult: row.inkult,
+            library_owner: row.library_owner,
         })
     }
 }

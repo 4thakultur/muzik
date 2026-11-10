@@ -24,6 +24,9 @@ services:
     # Muzik's address in INKULT_TRUSTED_PROXIES so its sign-in limits apply per
     # real client rather than to Muzik as a whole. To read Inkult's downloads,
     # mount Inkult's music folder (read-only) as the library above.
+    # Separate libraries per Inkult user (Settings > Inkult) also need Inkult's
+    # data folder, read-only, and MUZIK_INKULT_LIBRARY=/inkult/library.json
+    # (see README, "Separate libraries per Inkult user").
     volumes:
       # Testing layout: everything lives under ./music on the host.
       #   ./music/library  -> audio files (ALWAYS mounted read-only)

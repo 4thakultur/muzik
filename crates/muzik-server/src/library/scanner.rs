@@ -24,7 +24,7 @@ use super::{
     metadata::{self, TrackMeta},
     paths::LibraryRoots,
 };
-use crate::db::now;
+use crate::{db::now, inkult_index::InkultIndex};
 
 const READ_CHUNK: usize = 32;
 const WRITE_BATCH: usize = 256;
@@ -37,6 +37,7 @@ pub struct Scanner {
     roots: Arc<std::sync::RwLock<LibraryRoots>>,
     lock: Arc<Mutex<()>>,
     progress: Arc<watch::Sender<ScanProgress>>,
+    inkult_index: Arc<InkultIndex>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -57,6 +58,7 @@ impl Scanner {
         pool: SqlitePool,
         library_paths: Vec<PathBuf>,
         roots: Arc<std::sync::RwLock<LibraryRoots>>,
+        inkult_index: Arc<InkultIndex>,
     ) -> Self {
         let (tx, _) = watch::channel(ScanProgress::default());
         Self {
@@ -65,6 +67,7 @@ impl Scanner {
             roots,
             lock: Arc::new(Mutex::new(())),
             progress: Arc::new(tx),
+            inkult_index,
         }
     }
 
@@ -218,6 +221,13 @@ impl Scanner {
             }
         }
         self.write_batch(batch, &existing).await?;
+
+        // New files may have arrived with an Inkult download: pick up their
+        // owners now rather than at the next poll. Failures are logged and
+        // keep the previous copy.
+        if self.inkult_index.configured() {
+            let _ = self.inkult_index.sync(false).await;
+        }
 
         self.progress
             .send_modify(|p| p.phase = ScanPhase::Finalizing);

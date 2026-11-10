@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT pt.id AS \"entry_id!\", pt.added_at, ub.display_name AS \"added_by?\",\n                  pt.title AS snap_title, pt.artist_name AS snap_artist,\n                  pt.album_title AS snap_album, pt.duration_ms AS snap_duration,\n                  t.id AS \"track_id?\", t.title AS \"title?\", t.artist_name AS \"artist_name?\",\n                  t.album_id AS \"album_id?\", al.title AS \"album_title?\",\n                  al.artist_id AS \"album_artist_id?\", t.disc_no, t.track_no,\n                  t.duration_ms AS \"duration_ms?\", t.codec AS \"codec?\", t.sample_rate,\n                  t.bit_depth, t.channels, t.bitrate_kbps, t.lossless AS \"lossless?: bool\"\n           FROM playlist_tracks pt\n           LEFT JOIN tracks t ON t.id = pt.track_id\n           LEFT JOIN albums al ON al.id = t.album_id\n           LEFT JOIN users ub ON ub.id = pt.added_by\n           WHERE pt.playlist_id = ?\n           ORDER BY pt.position",
+  "query": "SELECT pt.id AS \"entry_id!\", pt.added_at, ub.display_name AS \"added_by?\",\n                  pt.title AS snap_title, pt.artist_name AS snap_artist,\n                  pt.album_title AS snap_album, pt.duration_ms AS snap_duration,\n                  t.id AS \"track_id?\", t.title AS \"title?\", t.artist_name AS \"artist_name?\",\n                  t.album_id AS \"album_id?\", al.title AS \"album_title?\",\n                  al.artist_id AS \"album_artist_id?\", t.disc_no, t.track_no,\n                  t.duration_ms AS \"duration_ms?\", t.codec AS \"codec?\", t.sample_rate,\n                  t.bit_depth, t.channels, t.bitrate_kbps, t.lossless AS \"lossless?: bool\"\n           FROM playlist_tracks pt\n           LEFT JOIN tracks t ON t.id = pt.track_id AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))\n           LEFT JOIN albums al ON al.id = t.album_id\n           LEFT JOIN users ub ON ub.id = pt.added_by\n           WHERE pt.playlist_id = ?1\n           ORDER BY pt.position",
   "describe": {
     "columns": [
       {
@@ -115,7 +115,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       true,
@@ -142,5 +142,5 @@
       false
     ]
   },
-  "hash": "5eaa449d7acf5cdff9bc33d2e7518d860fe9055899651938a6e67ef384eca0c3"
+  "hash": "11a4d18ef480f96741c06263d973caf0a968a7afe551da943c50faf6a313c07e"
 }

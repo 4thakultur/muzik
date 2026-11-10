@@ -535,9 +535,10 @@ impl InkultSignIn<'_> {
 async fn link_inkult_account(pool: &sqlx::SqlitePool, account: &InkultAccount) -> ApiResult<i64> {
     let mut tx = pool.begin().await?;
     if let Some(id) = sqlx::query_scalar!(
-        r#"UPDATE users SET inkult_two_factor = ?
+        r#"UPDATE users SET inkult_two_factor = ?, inkult_captain = ?
            WHERE inkult_user_id = ? AND auth_provider = 'inkult' RETURNING id AS "id!""#,
         account.two_factor,
+        account.captain,
         account.id
     )
     .fetch_optional(&mut *tx)
@@ -556,9 +557,11 @@ async fn link_inkult_account(pool: &sqlx::SqlitePool, account: &InkultAccount) -
     let id = match by_name {
         Some(u) if u.inkult && u.inkult_user_id.is_none() => {
             sqlx::query!(
-                "UPDATE users SET inkult_user_id = ?, inkult_two_factor = ? WHERE id = ?",
+                "UPDATE users SET inkult_user_id = ?, inkult_two_factor = ?, inkult_captain = ?
+                 WHERE id = ?",
                 account.id,
                 account.two_factor,
+                account.captain,
                 u.id
             )
             .execute(&mut *tx)
@@ -574,14 +577,15 @@ async fn link_inkult_account(pool: &sqlx::SqlitePool, account: &InkultAccount) -
             let now = now();
             let id = sqlx::query_scalar!(
                 r#"INSERT INTO users (username, display_name, password_hash, auth_provider,
-                                      inkult_user_id, inkult_two_factor, created_at)
-                   VALUES (?, ?, ?, 'inkult', ?, ?, ?)
+                                      inkult_user_id, inkult_two_factor, inkult_captain, created_at)
+                   VALUES (?, ?, ?, 'inkult', ?, ?, ?, ?)
                    ON CONFLICT DO NOTHING RETURNING id AS "id!""#,
                 username,
                 username,
                 inkult::NO_LOCAL_PASSWORD,
                 account.id,
                 account.two_factor,
+                account.captain,
                 now
             )
             .fetch_optional(&mut *tx)

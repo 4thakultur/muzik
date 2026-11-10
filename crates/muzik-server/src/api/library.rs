@@ -33,18 +33,33 @@ impl PageParams {
 
 pub async fn artists(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Query(p): Query<PageParams>,
 ) -> ApiResult<Json<Page<Artist>>> {
     let (offset, limit) = p.clamp();
-    let total = sqlx::query_scalar!(r#"SELECT COUNT(*) AS "n!: i64" FROM artists"#)
-        .fetch_one(&state.pool)
-        .await?;
+    let lib = user.library_owner;
+    let total = sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "n!: i64" FROM artists ar
+           WHERE EXISTS (SELECT 1 FROM albums al JOIN tracks t ON t.album_id = al.id
+                         WHERE al.artist_id = ar.id AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1)))"#,
+        lib
+    )
+    .fetch_one(&state.pool)
+    .await?;
     let items = sqlx::query_as!(
         Artist,
         r#"SELECT ar.id AS "id!", ar.name,
-                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id) AS "album_count!: i64"
-           FROM artists ar ORDER BY ar.sort_name LIMIT ? OFFSET ?"#,
+                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id
+                     AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1))))
+                    AS "album_count!: i64"
+           FROM artists ar
+           WHERE EXISTS (SELECT 1 FROM albums al JOIN tracks t ON t.album_id = al.id
+                         WHERE al.artist_id = ar.id AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1)))
+           ORDER BY ar.sort_name LIMIT ?2 OFFSET ?3"#,
+        lib,
         limit,
         offset
     )
@@ -60,14 +75,23 @@ pub async fn artists(
 
 pub async fn artist(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<i64>,
 ) -> ApiResult<Json<ArtistDetail>> {
+    let lib = user.library_owner;
     let artist = sqlx::query_as!(
         Artist,
         r#"SELECT ar.id AS "id!", ar.name,
-                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id) AS "album_count!: i64"
-           FROM artists ar WHERE ar.id = ?"#,
+                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id
+                     AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1))))
+                    AS "album_count!: i64"
+           FROM artists ar
+           WHERE ar.id = ?2
+             AND EXISTS (SELECT 1 FROM albums al JOIN tracks t ON t.album_id = al.id
+                         WHERE al.artist_id = ar.id AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1)))"#,
+        lib,
         id
     )
     .fetch_optional(&state.pool)
@@ -82,9 +106,11 @@ pub async fn artist(
            FROM albums al
            JOIN artists ar ON ar.id = al.artist_id
            JOIN tracks t ON t.album_id = al.id
-           WHERE al.artist_id = ?
+           WHERE al.artist_id = ?2 AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1))
            GROUP BY al.id
            ORDER BY al.year DESC, al.title"#,
+        lib,
         id
     )
     .fetch_all(&state.pool)
@@ -104,7 +130,7 @@ pub struct AlbumListParams {
 
 pub async fn albums(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Query(p): Query<AlbumListParams>,
 ) -> ApiResult<Json<Page<Album>>> {
     let (offset, limit) = (p.offset.max(0), p.limit.clamp(1, MAX_LIMIT));
@@ -115,9 +141,15 @@ pub async fn albums(
         Some("recent") => 3,
         Some(_) => return Err(AppError::BadRequest("invalid sort".into())),
     };
-    let total = sqlx::query_scalar!(r#"SELECT COUNT(*) AS "n!: i64" FROM albums"#)
-        .fetch_one(&state.pool)
-        .await?;
+    let lib = user.library_owner;
+    let total = sqlx::query_scalar!(
+        r#"SELECT COUNT(*) AS "n!: i64" FROM albums al
+           WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?1 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?1)))"#,
+        lib
+    )
+    .fetch_one(&state.pool)
+    .await?;
     let items = sqlx::query_as!(
         Album,
         r#"SELECT al.id AS "id!", al.title AS "title!", al.artist_id AS "artist_id!", ar.name AS "artist_name!", al.year,
@@ -127,6 +159,8 @@ pub async fn albums(
            FROM albums al
            JOIN artists ar ON ar.id = al.artist_id
            JOIN tracks t ON t.album_id = al.id
+           WHERE (?4 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?4))
            GROUP BY al.id
            ORDER BY
              CASE WHEN ?1 = 0 THEN al.title END,
@@ -137,7 +171,8 @@ pub async fn albums(
            LIMIT ?2 OFFSET ?3"#,
         sort,
         limit,
-        offset
+        offset,
+        lib
     )
     .fetch_all(&state.pool)
     .await?;
@@ -151,9 +186,10 @@ pub async fn albums(
 
 pub async fn album(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<i64>,
 ) -> ApiResult<Json<AlbumDetail>> {
+    let lib = user.library_owner;
     let album = sqlx::query_as!(
         Album,
         r#"SELECT al.id AS "id!", al.title AS "title!", al.artist_id AS "artist_id!", ar.name AS "artist_name!", al.year,
@@ -163,9 +199,11 @@ pub async fn album(
            FROM albums al
            JOIN artists ar ON ar.id = al.artist_id
            JOIN tracks t ON t.album_id = al.id
-           WHERE al.id = ?
+           WHERE al.id = ?1 AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))
            GROUP BY al.id"#,
-        id
+        id,
+        lib
     )
     .fetch_optional(&state.pool)
     .await?
@@ -177,9 +215,11 @@ pub async fn album(
                   t.sample_rate, t.bit_depth, t.channels, t.bitrate_kbps,
                   t.lossless AS "lossless: bool"
            FROM tracks t JOIN albums al ON al.id = t.album_id
-           WHERE t.album_id = ?
+           WHERE t.album_id = ?1 AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))
            ORDER BY COALESCE(t.disc_no, 1), t.track_no, t.title"#,
-        id
+        id,
+        lib
     )
     .fetch_all(&state.pool)
     .await?;
@@ -188,7 +228,7 @@ pub async fn album(
 
 pub async fn track(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<i64>,
 ) -> ApiResult<Json<Track>> {
     let track = sqlx::query_as!(
@@ -198,8 +238,10 @@ pub async fn track(
                   t.sample_rate, t.bit_depth, t.channels, t.bitrate_kbps,
                   t.lossless AS "lossless: bool"
            FROM tracks t JOIN albums al ON al.id = t.album_id
-           WHERE t.id = ?"#,
-        id
+           WHERE t.id = ?1 AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))"#,
+        id,
+        user.library_owner
     )
     .fetch_optional(&state.pool)
     .await?
@@ -223,14 +265,20 @@ fn default_suggestions() -> i64 {
 /// vary. The seed's own album is excluded (it is usually already queued).
 pub async fn suggestions(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<i64>,
     Query(p): Query<SuggestionParams>,
 ) -> ApiResult<Json<Vec<Track>>> {
     let limit = p.limit.clamp(1, 50);
-    let exists = sqlx::query_scalar!(r#"SELECT 1 AS "x!: i64" FROM tracks WHERE id = ?"#, id)
-        .fetch_optional(&state.pool)
-        .await?;
+    let lib = user.library_owner;
+    let exists = sqlx::query_scalar!(
+        r#"SELECT 1 AS "x!: i64" FROM tracks t WHERE t.id = ?1 AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))"#,
+        id,
+        lib
+    )
+    .fetch_optional(&state.pool)
+    .await?;
     if exists.is_none() {
         return Err(AppError::NotFound);
     }
@@ -239,22 +287,24 @@ pub async fn suggestions(
         r#"WITH seed AS (
                SELECT t.genre, t.year, t.album_id, al.artist_id
                FROM tracks t JOIN albums al ON al.id = t.album_id
-               WHERE t.id = ?
+               WHERE t.id = ?1
            )
            SELECT t.id AS "id!", t.title, t.artist_name, t.album_id, al.title AS album_title,
                   al.artist_id AS album_artist_id, t.disc_no, t.track_no, t.duration_ms, t.codec,
                   t.sample_rate, t.bit_depth, t.channels, t.bitrate_kbps,
                   t.lossless AS "lossless: bool"
            FROM tracks t JOIN albums al ON al.id = t.album_id, seed s
-           WHERE t.album_id != s.album_id
+           WHERE t.album_id != s.album_id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))
            ORDER BY
                (CASE WHEN s.genre IS NOT NULL AND t.genre = s.genre COLLATE NOCASE THEN 3 ELSE 0 END)
              + (CASE WHEN al.artist_id = s.artist_id THEN 2 ELSE 0 END)
              + (CASE WHEN s.year IS NOT NULL AND abs(t.year - s.year) <= 5 THEN 1 ELSE 0 END) DESC,
                random()
-           LIMIT ?"#,
+           LIMIT ?2"#,
         id,
-        limit
+        limit,
+        lib
     )
     .fetch_all(&state.pool)
     .await?;
@@ -273,7 +323,7 @@ fn default_cover_size() -> u32 {
 
 pub async fn album_cover(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<i64>,
     Query(p): Query<CoverParams>,
     headers: HeaderMap,
@@ -281,8 +331,11 @@ pub async fn album_cover(
     let row = sqlx::query!(
         r#"SELECT al.cover_path, t.path AS "track_path?", t.mtime AS "track_mtime?"
            FROM albums al LEFT JOIN tracks t ON t.id = al.cover_track_id
-           WHERE al.id = ?"#,
-        id
+           WHERE al.id = ?1
+             AND EXISTS (SELECT 1 FROM tracks v WHERE v.album_id = al.id AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = v.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = v.path AND ko.owner_id = ?2)))"#,
+        id,
+        user.library_owner
     )
     .fetch_optional(&state.pool)
     .await?
@@ -355,16 +408,24 @@ pub async fn search(
         return Ok(Json(SearchResults::default()));
     };
     let limit = p.limit.clamp(1, 50);
+    let lib = user.library_owner;
 
     let artists = sqlx::query_as!(
         Artist,
         r#"SELECT ar.id AS "id!", ar.name,
-                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id) AS "album_count!: i64"
+                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id
+                     AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))))
+                    AS "album_count!: i64"
            FROM search_fts f JOIN artists ar ON ar.id = f.ref_id
-           WHERE search_fts MATCH ? AND f.kind = 'artist'
-           ORDER BY f.rank LIMIT ?"#,
+           WHERE search_fts MATCH ?1 AND f.kind = 'artist'
+             AND EXISTS (SELECT 1 FROM albums al JOIN tracks t ON t.album_id = al.id
+                         WHERE al.artist_id = ar.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3)))
+           ORDER BY f.rank LIMIT ?2"#,
         q,
-        limit
+        limit,
+        lib
     )
     .fetch_all(&state.pool)
     .await?;
@@ -372,16 +433,21 @@ pub async fn search(
     let albums = sqlx::query_as!(
         Album,
         r#"SELECT al.id AS "id!", al.title AS "title!", al.artist_id AS "artist_id!", ar.name AS "artist_name!", al.year,
-                  (SELECT COUNT(*) FROM tracks t WHERE t.album_id = al.id) AS "track_count!: i64",
-                  (SELECT COALESCE(SUM(duration_ms), 0) FROM tracks t WHERE t.album_id = al.id) AS "duration_ms!: i64",
+                  (SELECT COUNT(*) FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))) AS "track_count!: i64",
+                  (SELECT COALESCE(SUM(duration_ms), 0) FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))) AS "duration_ms!: i64",
                   (al.cover_track_id IS NOT NULL OR al.cover_path IS NOT NULL) AS "has_cover!: bool"
            FROM search_fts f
            JOIN albums al ON al.id = f.ref_id
            JOIN artists ar ON ar.id = al.artist_id
-           WHERE search_fts MATCH ? AND f.kind = 'album'
-           ORDER BY f.rank LIMIT ?"#,
+           WHERE search_fts MATCH ?1 AND f.kind = 'album'
+             AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3)))
+           ORDER BY f.rank LIMIT ?2"#,
         q,
-        limit
+        limit,
+        lib
     )
     .fetch_all(&state.pool)
     .await?;
@@ -395,10 +461,12 @@ pub async fn search(
            FROM search_fts f
            JOIN tracks t ON t.id = f.ref_id
            JOIN albums al ON al.id = t.album_id
-           WHERE search_fts MATCH ? AND f.kind = 'track'
-           ORDER BY f.rank LIMIT ?"#,
+           WHERE search_fts MATCH ?1 AND f.kind = 'track' AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))
+           ORDER BY f.rank LIMIT ?2"#,
         q,
-        limit
+        limit,
+        lib
     )
     .fetch_all(&state.pool)
     .await?;
@@ -406,6 +474,7 @@ pub async fn search(
     let playlists = super::playlists::summaries(
         &state.pool,
         user.id,
+        lib,
         super::playlists::Scope::Search(&p.q),
         limit,
     )

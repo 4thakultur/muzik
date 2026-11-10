@@ -74,6 +74,38 @@ pub struct InkultSettings {
     /// passwords would travel unencrypted (set by the server).
     #[serde(default)]
     pub insecure: bool,
+    /// Each Inkult account only sees the songs it owns in Inkult (see
+    /// [`UpdateInkultLibraries`]).
+    #[serde(default)]
+    pub separate_libraries: bool,
+    /// Muzik's copy of Inkult's library index. `None` when the server has no
+    /// `MUZIK_INKULT_LIBRARY` (separate libraries can't be turned on).
+    #[serde(default)]
+    pub library_index: Option<InkultIndexStatus>,
+}
+
+/// Muzik's copy of Inkult's `library.json`, which records who owns each file.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct InkultIndexStatus {
+    /// Where Muzik reads the index (`MUZIK_INKULT_LIBRARY`).
+    pub path: String,
+    /// Files listed in the index.
+    pub files: i64,
+    /// Of those, files found in Muzik's library (scanned).
+    pub matched: i64,
+    /// Last successful read (Unix seconds).
+    pub synced_at: Option<i64>,
+    /// Why the last read failed (the previous copy is kept meanwhile).
+    pub error: Option<String>,
+}
+
+/// `PUT /api/admin/inkult/libraries`. While on, an Inkult account that is
+/// neither a Muzik admin nor an Inkult captain only sees the songs it owns in
+/// Inkult, plus songs Inkult doesn't know (added to the folder by hand).
+/// Local Muzik accounts keep seeing everything.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdateInkultLibraries {
+    pub separate: bool,
 }
 
 /// `PUT /api/admin/inkult`. Turning sign-in on, or changing the address

@@ -100,10 +100,33 @@ All settings are environment variables.
 | `MUZIK_WEB_DIR` | `/app/web` | Built web UI. |
 | `MUZIK_LOG_FORMAT` | `json` in Docker | `json` for structured logs, otherwise human-readable. |
 | `RUST_LOG` | `info` | Log filter, e.g. `muzik_server=debug`. |
+| `MUZIK_INKULT_LIBRARY` | *(none)* | Inkult's `library.json`, for [separate libraries](#separate-libraries-per-inkult-user). |
+| `MUZIK_INKULT_MUSIC_DIR` | first library path | Where Inkult's music folder is mounted in Muzik (the paths in `library.json` are relative to it). |
 
 ### Inkult sign-in (optional)
 
 Muzik can let users sign in with their accounts from an Inkult server. It is off by default and configured by an admin under **Settings → Inkult**. When it is enabled, every Inkult account can sign in to Muzik, and Inkult's own two-factor authentication applies. Muzik works fully without it.
+
+#### Separate libraries per Inkult user
+
+Inkult stores each song once in a shared music folder and records in its `library.json` which users downloaded it. Muzik can read that file so that each Inkult user only hears their own songs, as in Inkult. Turn it on under **Settings → Inkult → Separate Libraries**. With it on:
+
+- An Inkult user sees and streams only the songs they own in Inkult. Songs that are not in Inkult's index at all, because they were copied into the folder by hand, are shared with everyone.
+- Inkult captains, Muzik admins and accounts with a Muzik password see the whole library.
+- Songs outside your library show as *Unavailable* in other people's shared playlists, and you can't add them to a playlist.
+- Ownership follows Inkult within about 30 seconds, with no rescan. New files still need a scan, as usual.
+
+Mount Inkult's **data folder** read-only and point Muzik at the index. Mount the folder, not just the file: Inkult replaces `library.json` atomically, and a single-file bind mount would keep showing the old copy.
+
+```yaml
+    volumes:
+      - /srv/inkult/music:/music:ro          # Inkult's MUSIC_DIR as the library
+      - /srv/inkult/data:/inkult:ro          # Inkult's DATA_DIR
+    environment:
+      MUZIK_INKULT_LIBRARY: /inkult/library.json
+```
+
+Inkult's data folder also holds its account and Soulseek credentials. Inkult writes those files as owner-only (`0600`), so run Muzik under a different uid than Inkult's `PUID` to keep them unreadable to Muzik. `library.json` stays world-readable. Muzik refuses to turn the feature on if it can't read the index, or if none of the files listed in it are in the library (a wrong `MUZIK_INKULT_MUSIC_DIR`). If the index becomes unreadable later, Muzik keeps its last good copy rather than showing everything.
 
 ---
 

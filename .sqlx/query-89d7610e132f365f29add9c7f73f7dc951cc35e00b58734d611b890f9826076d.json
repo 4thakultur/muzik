@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE users SET inkult_user_id = ?, inkult_two_factor = ?, inkult_captain = ?\n                 WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "89d7610e132f365f29add9c7f73f7dc951cc35e00b58734d611b890f9826076d"
+}

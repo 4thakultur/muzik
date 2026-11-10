@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO inkult_owners (path, owner_id) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "41769cfab55cb96b6a6189e2b3495b547ddcf6d1cfcd37bae589bd1ca4f776e6"
+}

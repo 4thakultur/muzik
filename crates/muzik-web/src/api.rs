@@ -200,6 +200,16 @@ pub async fn set_inkult_settings(settings: &UpdateInkultSettings) -> ApiResult<I
     send_json("PUT", "/api/admin/inkult", settings).await
 }
 
+/// Turns separate libraries per Inkult account on or off.
+pub async fn set_inkult_libraries(separate: bool) -> ApiResult<InkultSettings> {
+    send_json(
+        "PUT",
+        "/api/admin/inkult/libraries",
+        &muzik_common::UpdateInkultLibraries { separate },
+    )
+    .await
+}
+
 /// Checks that `url` reaches an Inkult server; returns its version.
 pub async fn test_inkult(url: String) -> ApiResult<InkultTestResult> {
     send_json("POST", "/api/admin/inkult/test", &InkultTestRequest { url }).await

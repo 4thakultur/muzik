@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM inkult_files WHERE path = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "37d876155ec1bbe5cd48d14107a20dcf8e3cdf95c1e80ff210f7078fbd251412"
+}

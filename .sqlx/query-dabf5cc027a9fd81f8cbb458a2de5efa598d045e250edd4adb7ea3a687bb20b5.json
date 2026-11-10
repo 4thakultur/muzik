@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT al.id AS \"id!\", al.title AS \"title!\", al.artist_id AS \"artist_id!\", ar.name AS \"artist_name!\", al.year,\n                  COUNT(t.id) AS \"track_count!: i64\",\n                  COALESCE(SUM(t.duration_ms), 0) AS \"duration_ms!: i64\",\n                  (al.cover_track_id IS NOT NULL OR al.cover_path IS NOT NULL) AS \"has_cover!: bool\"\n           FROM albums al\n           JOIN artists ar ON ar.id = al.artist_id\n           JOIN tracks t ON t.album_id = al.id\n           WHERE al.id = ?\n           GROUP BY al.id",
+  "query": "SELECT al.id AS \"id!\", al.title AS \"title!\", al.artist_id AS \"artist_id!\", ar.name AS \"artist_name!\", al.year,\n                  COUNT(t.id) AS \"track_count!: i64\",\n                  COALESCE(SUM(t.duration_ms), 0) AS \"duration_ms!: i64\",\n                  (al.cover_track_id IS NOT NULL OR al.cover_path IS NOT NULL) AS \"has_cover!: bool\"\n           FROM albums al\n           JOIN artists ar ON ar.id = al.artist_id\n           JOIN tracks t ON t.album_id = al.id\n           WHERE al.id = ?1 AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))\n           GROUP BY al.id",
   "describe": {
     "columns": [
       {
@@ -45,7 +45,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -58,5 +58,5 @@
       false
     ]
   },
-  "hash": "c72d46f46aa662a396dd2141a4e9ac9f20c2dfb05e2988003eacf2b69c792513"
+  "hash": "dabf5cc027a9fd81f8cbb458a2de5efa598d045e250edd4adb7ea3a687bb20b5"
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE users SET auth_provider = 'inkult', password_hash = ?, inkult_user_id = NULL,\n                    inkult_two_factor = 0, inkult_captain = 0\n             WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "5c19d9cce1220316ba4a7e3d965a78e1633bec04d8cb84703601e8b245829ce7"
+}

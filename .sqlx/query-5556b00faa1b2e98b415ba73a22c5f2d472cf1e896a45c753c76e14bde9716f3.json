@@ -1,20 +1,20 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT 1 AS \"x!: i64\" FROM tracks WHERE id = ?",
+  "query": "SELECT COUNT(*) AS \"n!: i64\" FROM inkult_files",
   "describe": {
     "columns": [
       {
-        "name": "x!: i64",
+        "name": "n!: i64",
         "ordinal": 0,
         "type_info": "Integer"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
       false
     ]
   },
-  "hash": "409c796b7f3836b0f6d0b5bbe57315fe2d3ad184449a4d9f8b0f3b257482b026"
+  "hash": "5556b00faa1b2e98b415ba73a22c5f2d472cf1e896a45c753c76e14bde9716f3"
 }

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT inkult_enabled AS \"enabled: bool\", inkult_url,\n                  inkult_separate_libraries AS \"separate_libraries: bool\"\n           FROM server_settings WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "enabled: bool",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inkult_url",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "separate_libraries: bool",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "d52ade17179709898eb9d9c92229c5965289affa8841fbc5bb48162b135a976a"
+}

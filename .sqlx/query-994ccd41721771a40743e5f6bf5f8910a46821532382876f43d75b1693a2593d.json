@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT al.id AS \"id!\", al.title AS \"title!\", al.artist_id AS \"artist_id!\", ar.name AS \"artist_name!\", al.year,\n                  (SELECT COUNT(*) FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))) AS \"track_count!: i64\",\n                  (SELECT COALESCE(SUM(duration_ms), 0) FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3))) AS \"duration_ms!: i64\",\n                  (al.cover_track_id IS NOT NULL OR al.cover_path IS NOT NULL) AS \"has_cover!: bool\"\n           FROM search_fts f\n           JOIN albums al ON al.id = f.ref_id\n           JOIN artists ar ON ar.id = al.artist_id\n           WHERE search_fts MATCH ?1 AND f.kind = 'album'\n             AND EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id AND (?3 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?3)))\n           ORDER BY f.rank LIMIT ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "title!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "artist_id!",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "artist_name!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "year",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "track_count!: i64",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "duration_ms!: i64",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "has_cover!: bool",
+        "ordinal": 7,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "994ccd41721771a40743e5f6bf5f8910a46821532382876f43d75b1693a2593d"
+}

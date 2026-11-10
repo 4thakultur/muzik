@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO users (username, display_name, password_hash, auth_provider,\n                                      inkult_user_id, inkult_two_factor, inkult_captain, created_at)\n                   VALUES (?, ?, ?, 'inkult', ?, ?, ?, ?)\n                   ON CONFLICT DO NOTHING RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8bb6820403ca5e3292e4d785086b7f9005a71703ab806f06572ac7e76e2f2a3c"
+}

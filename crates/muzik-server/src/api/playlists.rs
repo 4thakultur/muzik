@@ -36,9 +36,12 @@ pub enum Scope<'a> {
     Search(&'a str),
 }
 
+/// `library` is the viewer's [`CurrentUser::library_owner`]: songs outside
+/// it count as unavailable (no duration, no cover).
 pub async fn summaries(
     pool: &SqlitePool,
     me: i64,
+    library: Option<i64>,
     scope: Scope<'_>,
     limit: i64,
 ) -> Result<Vec<PlaylistSummary>, sqlx::Error> {
@@ -56,13 +59,17 @@ pub async fn summaries(
                   (SELECT COUNT(*) FROM playlist_tracks pt
                     WHERE pt.playlist_id = p.id) AS "track_count!: i64",
                   (SELECT COALESCE(SUM(pt.duration_ms), 0) FROM playlist_tracks pt
-                    WHERE pt.playlist_id = p.id AND pt.track_id IS NOT NULL) AS "duration_ms!: i64",
+                    JOIN tracks t ON t.id = pt.track_id
+                    WHERE pt.playlist_id = p.id AND (?6 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?6))) AS "duration_ms!: i64",
                   (SELECT group_concat(album_id) FROM (
                       SELECT t.album_id FROM playlist_tracks pt
                       JOIN tracks t ON t.id = pt.track_id
                       JOIN albums al ON al.id = t.album_id
                       WHERE pt.playlist_id = p.id AND pt.position < 200
                         AND (al.cover_track_id IS NOT NULL OR al.cover_path IS NOT NULL)
+                        AND (?6 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?6))
                       GROUP BY t.album_id ORDER BY MIN(pt.position) LIMIT 4)) AS "covers?: String"
            FROM playlists p
            JOIN users u ON u.id = p.owner_id
@@ -79,7 +86,8 @@ pub async fn summaries(
         mode,
         id,
         pattern,
-        limit
+        limit,
+        library
     )
     .fetch_all(pool)
     .await?;
@@ -114,8 +122,8 @@ pub async fn summaries(
         .collect())
 }
 
-async fn summary(pool: &SqlitePool, me: i64, id: i64) -> ApiResult<PlaylistSummary> {
-    summaries(pool, me, Scope::One(id), 1)
+async fn summary(pool: &SqlitePool, me: &CurrentUser, id: i64) -> ApiResult<PlaylistSummary> {
+    summaries(pool, me.id, me.library_owner, Scope::One(id), 1)
         .await?
         .pop()
         .ok_or(AppError::NotFound)
@@ -224,7 +232,7 @@ async fn touch(conn: &mut SqliteConnection, id: i64) -> ApiResult<()> {
 async fn insert_tracks(
     conn: &mut SqliteConnection,
     playlist_id: i64,
-    me: i64,
+    me: &CurrentUser,
     track_ids: &[i64],
     position: Option<i64>,
     allow_duplicates: bool,
@@ -237,11 +245,14 @@ async fn insert_tracks(
     let ids_json = serde_json::to_string(track_ids).map_err(crate::error::internal)?;
     let rows = sqlx::query!(
         r#"SELECT t.id AS "id!", t.title, t.artist_name, al.title AS album_title, t.duration_ms
-           FROM json_each(?) j
+           FROM json_each(?1) j
            JOIN tracks t ON t.id = j.value
            JOIN albums al ON al.id = t.album_id
+           WHERE (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))
            ORDER BY j.key"#,
-        ids_json
+        ids_json,
+        me.library_owner
     )
     .fetch_all(&mut *conn)
     .await?;
@@ -303,7 +314,7 @@ async fn insert_tracks(
             playlist_id,
             r.id,
             pos,
-            me,
+            me.id,
             now,
             r.title,
             r.artist_name,
@@ -324,7 +335,14 @@ pub async fn library(
     user: CurrentUser,
 ) -> ApiResult<Json<Vec<PlaylistSummary>>> {
     Ok(Json(
-        summaries(&state.pool, user.id, Scope::Library, 1000).await?,
+        summaries(
+            &state.pool,
+            user.id,
+            user.library_owner,
+            Scope::Library,
+            1000,
+        )
+        .await?,
     ))
 }
 
@@ -334,7 +352,7 @@ pub async fn shared(
     user: CurrentUser,
 ) -> ApiResult<Json<Vec<PlaylistSummary>>> {
     Ok(Json(
-        summaries(&state.pool, user.id, Scope::Shared, 50).await?,
+        summaries(&state.pool, user.id, user.library_owner, Scope::Shared, 50).await?,
     ))
 }
 
@@ -362,13 +380,13 @@ pub async fn create(
     .fetch_one(&mut *tx)
     .await?;
     if !req.track_ids.is_empty() {
-        insert_tracks(&mut tx, id, user.id, &req.track_ids, None, true).await?;
+        insert_tracks(&mut tx, id, &user, &req.track_ids, None, true).await?;
     }
     tx.commit().await?;
     tracing::info!(user_id = user.id, playlist_id = id, "playlist created");
     Ok((
         StatusCode::CREATED,
-        Json(summary(&state.pool, user.id, id).await?),
+        Json(summary(&state.pool, &user, id).await?),
     ))
 }
 
@@ -377,7 +395,7 @@ pub async fn get(
     user: CurrentUser,
     Path(id): Path<i64>,
 ) -> ApiResult<Json<PlaylistDetail>> {
-    let playlist = summary(&state.pool, user.id, id).await?;
+    let playlist = summary(&state.pool, &user, id).await?;
     let rows = sqlx::query!(
         r#"SELECT pt.id AS "entry_id!", pt.added_at, ub.display_name AS "added_by?",
                   pt.title AS snap_title, pt.artist_name AS snap_artist,
@@ -388,12 +406,14 @@ pub async fn get(
                   t.duration_ms AS "duration_ms?", t.codec AS "codec?", t.sample_rate,
                   t.bit_depth, t.channels, t.bitrate_kbps, t.lossless AS "lossless?: bool"
            FROM playlist_tracks pt
-           LEFT JOIN tracks t ON t.id = pt.track_id
+           LEFT JOIN tracks t ON t.id = pt.track_id AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))
            LEFT JOIN albums al ON al.id = t.album_id
            LEFT JOIN users ub ON ub.id = pt.added_by
-           WHERE pt.playlist_id = ?
+           WHERE pt.playlist_id = ?1
            ORDER BY pt.position"#,
-        id
+        id,
+        user.library_owner
     )
     .fetch_all(&state.pool)
     .await?;
@@ -484,7 +504,7 @@ pub async fn update(
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    Ok(Json(summary(&state.pool, user.id, id).await?))
+    Ok(Json(summary(&state.pool, &user, id).await?))
 }
 
 pub async fn delete(
@@ -522,7 +542,7 @@ pub async fn add_tracks(
     let (added, duplicates) = insert_tracks(
         &mut tx,
         id,
-        user.id,
+        &user,
         &req.track_ids,
         req.position,
         req.allow_duplicates,
@@ -537,7 +557,7 @@ pub async fn add_tracks(
     Ok(Json(AddTracksResult {
         added,
         duplicates,
-        playlist: summary(&state.pool, user.id, id).await?,
+        playlist: summary(&state.pool, &user, id).await?,
     }))
 }
 
@@ -637,7 +657,7 @@ pub async fn follow(
     user: CurrentUser,
     Path(id): Path<i64>,
 ) -> ApiResult<Json<PlaylistSummary>> {
-    let p = summary(&state.pool, user.id, id).await?;
+    let p = summary(&state.pool, &user, id).await?;
     if p.is_owner {
         return Err(AppError::BadRequest(
             "this playlist is already yours".into(),
@@ -653,7 +673,7 @@ pub async fn follow(
     )
     .execute(&state.pool)
     .await?;
-    Ok(Json(summary(&state.pool, user.id, id).await?))
+    Ok(Json(summary(&state.pool, &user, id).await?))
 }
 
 pub async fn unfollow(
@@ -678,7 +698,7 @@ pub async fn duplicate(
     user: CurrentUser,
     Path(id): Path<i64>,
 ) -> ApiResult<(StatusCode, Json<PlaylistSummary>)> {
-    let src = summary(&state.pool, user.id, id).await?;
+    let src = summary(&state.pool, &user, id).await?;
     let name: String = if src.is_owner {
         let base: String = src.name.chars().take(PLAYLIST_NAME_MAX - 7).collect();
         format!("{base} (Copy)")
@@ -713,7 +733,7 @@ pub async fn duplicate(
     tx.commit().await?;
     Ok((
         StatusCode::CREATED,
-        Json(summary(&state.pool, user.id, new_id).await?),
+        Json(summary(&state.pool, &user, new_id).await?),
     ))
 }
 

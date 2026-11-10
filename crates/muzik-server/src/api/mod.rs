@@ -44,6 +44,7 @@ pub fn router() -> Router<AppState> {
             get(users::inkult_settings).put(users::set_inkult_settings),
         )
         .route("/admin/inkult/test", post(users::test_inkult))
+        .route("/admin/inkult/libraries", put(users::set_inkult_libraries))
         .route("/artists", get(library::artists))
         .route("/artists/{id}", get(library::artist))
         .route("/albums", get(library::albums))

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM inkult_owners WHERE path = ? AND owner_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "b4074712f9e3932a9b4b566c1b7c66e96cf1f9f00f123c865a08d8773f0ac84e"
+}

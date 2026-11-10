@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) AS \"n!: i64\" FROM artists",
+  "query": "SELECT COUNT(*) AS \"n!: i64\" FROM inkult_files f JOIN tracks t ON t.path = f.path",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "275d6358b741cf07bd13331fa6e146c055427adad6332f05dbe7d19e66eef562"
+  "hash": "6b5efc89aca082cca27d5aece31d3b524eaa558ad39a36660c23b19dbcdd3878"
 }

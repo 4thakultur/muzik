@@ -1,7 +1,7 @@
 use axum::{extract::State, Json};
 use muzik_common::{
     CreateUserRequest, InkultSettings, InkultTestRequest, InkultTestResult, SecurityPolicy,
-    UpdateInkultSettings, UpdateUserRequest, User,
+    UpdateInkultLibraries, UpdateInkultSettings, UpdateUserRequest, User,
 };
 
 use super::auth::{
@@ -146,7 +146,8 @@ pub async fn update(
     if to_local {
         // Forgets the link: the Inkult account no longer reaches this one.
         sqlx::query!(
-            "UPDATE users SET auth_provider = 'local', inkult_user_id = NULL, inkult_two_factor = 0
+            "UPDATE users SET auth_provider = 'local', inkult_user_id = NULL, inkult_two_factor = 0,
+                    inkult_captain = 0
              WHERE id = ?",
             id
         )
@@ -157,7 +158,7 @@ pub async fn update(
         let marker = inkult::NO_LOCAL_PASSWORD;
         sqlx::query!(
             "UPDATE users SET auth_provider = 'inkult', password_hash = ?, inkult_user_id = NULL,
-                    inkult_two_factor = 0
+                    inkult_two_factor = 0, inkult_captain = 0
              WHERE id = ?",
             marker,
             id
@@ -236,7 +237,55 @@ pub async fn inkult_settings(
     State(state): State<AppState>,
     _admin: AdminUser,
 ) -> ApiResult<Json<InkultSettings>> {
-    Ok(Json(inkult::settings(&state.pool).await?))
+    Ok(Json(inkult_view(&state).await?))
+}
+
+/// The connector settings with the state of Muzik's copy of Inkult's index.
+async fn inkult_view(state: &AppState) -> ApiResult<InkultSettings> {
+    let mut settings = inkult::settings(&state.pool).await?;
+    settings.library_index = state.inkult_index.status().await?;
+    Ok(settings)
+}
+
+/// `PUT /api/admin/inkult/libraries`: separate libraries per Inkult account.
+///
+/// Turning it on re-reads Inkult's index first and refuses when it can't be
+/// read, or when none of its files are in Muzik's library (the music folder
+/// is mounted elsewhere than `MUZIK_INKULT_MUSIC_DIR` says): every song would
+/// then count as "not from Inkult" and stay visible to everyone. Turning it
+/// off is always allowed. Takes effect on the next request of every session.
+pub async fn set_inkult_libraries(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    JsonBody(req): JsonBody<UpdateInkultLibraries>,
+) -> ApiResult<Json<InkultSettings>> {
+    if req.separate {
+        if !state.inkult_index.configured() {
+            return Err(AppError::BadRequest(
+                "set MUZIK_INKULT_LIBRARY to the path of Inkult's library.json first".into(),
+            ));
+        }
+        state.inkult_index.sync(true).await.map_err(|e| {
+            AppError::BadRequest(format!("cannot read Inkult's library index: {e}"))
+        })?;
+        if let Some(index) = state.inkult_index.status().await? {
+            if index.files > 0 && index.matched == 0 {
+                return Err(AppError::BadRequest(
+                    "none of the songs in Inkult's index are in Muzik's library: check that \
+                     MUZIK_INKULT_MUSIC_DIR is where Inkult's music folder is mounted, then rescan"
+                        .into(),
+                ));
+            }
+        }
+    }
+    sqlx::query!(
+        "UPDATE server_settings SET inkult_separate_libraries = ? WHERE id = 1",
+        req.separate
+    )
+    .execute(&state.pool)
+    .await?;
+    tracing::info!(target: "auth", event = "inkult_libraries_changed", by = admin.id, separate = req.separate, "separate Inkult libraries changed");
+    Ok(Json(inkult_view(&state).await?))
 }
 
 /// How recent an Inkult admin's sign-in must be to confirm a sensitive change
@@ -326,7 +375,7 @@ pub async fn set_inkult_settings(
     .await?;
     let insecure = url.as_deref().is_some_and(inkult::is_insecure_url);
     tracing::info!(target: "auth", event = "inkult_settings_changed", by = admin.id, enabled = req.enabled, url = ?url, insecure, "Inkult sign-in settings changed");
-    Ok(Json(inkult::settings(&state.pool).await?))
+    Ok(Json(inkult_view(&state).await?))
 }
 
 /// `POST /api/admin/inkult/test`: checks that the URL reaches an Inkult server.

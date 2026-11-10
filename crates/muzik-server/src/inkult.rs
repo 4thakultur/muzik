@@ -65,6 +65,9 @@ pub struct InkultAccount {
     pub username: String,
     /// The sign-in went through Inkult's second factor.
     pub two_factor: bool,
+    /// An Inkult administrator ("captain"): sees the whole library even
+    /// with separate libraries on, as in Inkult.
+    pub captain: bool,
 }
 
 pub enum InkultLogin {
@@ -94,6 +97,9 @@ struct AccountBody {
     username: String,
     #[serde(default)]
     two_factor_enabled: bool,
+    /// `captain` or `pirate`; anything else counts as a regular user.
+    #[serde(default)]
+    role: String,
     #[serde(default)]
     password_change_required: bool,
     #[serde(default)]
@@ -227,6 +233,7 @@ impl InkultClient {
             id: a.id,
             username: a.username.to_ascii_lowercase(),
             two_factor: via_second_factor || a.two_factor_enabled,
+            captain: a.role == "captain",
         })
     }
 
@@ -383,7 +390,8 @@ pub fn is_insecure_url(url: &str) -> bool {
 /// Current connector settings.
 pub async fn settings(pool: &sqlx::SqlitePool) -> Result<InkultSettings, sqlx::Error> {
     let r = sqlx::query!(
-        r#"SELECT inkult_enabled AS "enabled: bool", inkult_url
+        r#"SELECT inkult_enabled AS "enabled: bool", inkult_url,
+                  inkult_separate_libraries AS "separate_libraries: bool"
            FROM server_settings WHERE id = 1"#
     )
     .fetch_one(pool)
@@ -393,6 +401,9 @@ pub async fn settings(pool: &sqlx::SqlitePool) -> Result<InkultSettings, sqlx::E
         enabled: r.enabled,
         insecure: is_insecure_url(&url),
         url,
+        separate_libraries: r.separate_libraries,
+        // Filled in by the admin endpoints (`InkultIndex::status`).
+        library_index: None,
     })
 }
 

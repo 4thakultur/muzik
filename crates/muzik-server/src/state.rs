@@ -6,6 +6,7 @@ use crate::{
     auth::rate_limit::AuthLimiter,
     config::Config,
     inkult::InkultClient,
+    inkult_index::InkultIndex,
     library::{paths::LibraryRoots, scanner::Scanner},
     transcode::Transcoder,
 };
@@ -19,12 +20,20 @@ pub struct AppState {
     pub transcoder: Transcoder,
     pub auth_limiter: Arc<AuthLimiter>,
     pub inkult: Arc<InkultClient>,
+    /// Inkult's library index (who owns which file).
+    pub inkult_index: Arc<InkultIndex>,
 }
 
 impl AppState {
     pub fn new(pool: SqlitePool, config: Config) -> std::io::Result<Self> {
         let roots = Arc::new(RwLock::new(LibraryRoots::new(&config.library_paths)));
-        let scanner = Scanner::new(pool.clone(), config.library_paths.clone(), roots.clone());
+        let inkult_index = Arc::new(InkultIndex::new(pool.clone(), &config));
+        let scanner = Scanner::new(
+            pool.clone(),
+            config.library_paths.clone(),
+            roots.clone(),
+            inkult_index.clone(),
+        );
         let transcoder = Transcoder::new(
             config.ffmpeg.clone(),
             &config.cache_dir,
@@ -39,6 +48,7 @@ impl AppState {
             transcoder,
             auth_limiter: Arc::new(AuthLimiter::default()),
             inkult: Arc::new(inkult),
+            inkult_index,
             config: Arc::new(config),
         })
     }

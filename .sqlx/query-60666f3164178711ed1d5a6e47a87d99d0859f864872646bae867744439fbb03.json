@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT path, mtime, mime, codec, lossless AS \"lossless: bool\", bitrate_kbps\n           FROM tracks WHERE id = ?",
+  "query": "SELECT path, mtime, mime, codec, lossless AS \"lossless: bool\", bitrate_kbps\n           FROM tracks t WHERE t.id = ?1 AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)\n                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))",
   "describe": {
     "columns": [
       {
@@ -35,7 +35,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -46,5 +46,5 @@
       true
     ]
   },
-  "hash": "b0ef4d2001eb056da19080e37b57569728eb8f83f840869e8cae6b202af370ff"
+  "hash": "60666f3164178711ed1d5a6e47a87d99d0859f864872646bae867744439fbb03"
 }

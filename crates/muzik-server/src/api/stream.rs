@@ -20,18 +20,22 @@ pub struct StreamParams {
 /// `GET /api/stream/{track_id}?quality=original|high|normal|low`
 ///
 /// The client only sends an ID; the path comes from the database and is
-/// re-checked against the library roots before opening.
+/// re-checked against the library roots before opening. With separate
+/// libraries, a song the user doesn't own in Inkult answers 404 like a
+/// missing one.
 pub async fn stream(
     State(state): State<AppState>,
-    _user: CurrentUser,
+    user: CurrentUser,
     Path(id): Path<i64>,
     Query(p): Query<StreamParams>,
     headers: HeaderMap,
 ) -> ApiResult<Response> {
     let t = sqlx::query!(
         r#"SELECT path, mtime, mime, codec, lossless AS "lossless: bool", bitrate_kbps
-           FROM tracks WHERE id = ?"#,
-        id
+           FROM tracks t WHERE t.id = ?1 AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM inkult_files kf WHERE kf.path = t.path)
+                    OR EXISTS (SELECT 1 FROM inkult_owners ko WHERE ko.path = t.path AND ko.owner_id = ?2))"#,
+        id,
+        user.library_owner
     )
     .fetch_optional(&state.pool)
     .await?

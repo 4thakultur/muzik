@@ -51,6 +51,10 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // Inkult's library index (separate libraries), when configured.
+    let index = state.inkult_index.clone();
+    tokio::spawn(async move { index.poll().await });
+
     // Expired sessions and abandoned 2FA challenges are purged hourly.
     let pool = state.pool.clone();
     tokio::spawn(async move {
