@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO artists (name, sort_name) VALUES (?, ?)\n           ON CONFLICT(name) DO UPDATE SET sort_name = excluded.sort_name\n           RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "724805c849776494f5cf8a24fade5510e19573b20e0722ce6ae7158a33218161"
+}

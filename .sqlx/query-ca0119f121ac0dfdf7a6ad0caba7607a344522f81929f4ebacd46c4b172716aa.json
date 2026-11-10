@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT inkult_enabled AS \"enabled: bool\", inkult_url\n           FROM server_settings WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "enabled: bool",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inkult_url",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "ca0119f121ac0dfdf7a6ad0caba7607a344522f81929f4ebacd46c4b172716aa"
+}

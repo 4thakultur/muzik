@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO users (username, display_name, password_hash, is_admin, created_at)\n           SELECT ?, ?, ?, 1, ? WHERE NOT EXISTS (SELECT 1 FROM users)\n           RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5ff1545709c2f92f10a3604163c1bb1302928820bae1c994028684cd1a071d55"
+}

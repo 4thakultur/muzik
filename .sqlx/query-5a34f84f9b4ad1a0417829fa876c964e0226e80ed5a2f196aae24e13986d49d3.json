@@ -1,0 +1,104 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id AS \"id!\", t.title, t.artist_name, t.album_id, al.title AS album_title,\n                  al.artist_id AS album_artist_id, t.disc_no, t.track_no, t.duration_ms, t.codec,\n                  t.sample_rate, t.bit_depth, t.channels, t.bitrate_kbps,\n                  t.lossless AS \"lossless: bool\"\n           FROM tracks t JOIN albums al ON al.id = t.album_id\n           WHERE t.id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "artist_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_id",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "album_title",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_artist_id",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "disc_no",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "track_no",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "duration_ms",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "codec",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "sample_rate",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "bit_depth",
+        "ordinal": 11,
+        "type_info": "Integer"
+      },
+      {
+        "name": "channels",
+        "ordinal": 12,
+        "type_info": "Integer"
+      },
+      {
+        "name": "bitrate_kbps",
+        "ordinal": 13,
+        "type_info": "Integer"
+      },
+      {
+        "name": "lossless: bool",
+        "ordinal": 14,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "5a34f84f9b4ad1a0417829fa876c964e0226e80ed5a2f196aae24e13986d49d3"
+}

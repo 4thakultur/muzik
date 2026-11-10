@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO search_fts (kind, ref_id, text)\n         SELECT 'album', al.id, al.title || ' ' || ar.name\n         FROM albums al JOIN artists ar ON ar.id = al.artist_id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "bfdf284fd04cc5184a563ea28d755e7a24553fbec929b14540c4276cb2485054"
+}

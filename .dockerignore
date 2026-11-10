@@ -1,0 +1,16 @@
+target
+dev-data
+.env
+.env.local
+.git
+.github
+.claude
+music
+crates/muzik-web/dist
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.bak
+docker-compose*.yml
+README.md
+CLAUDE.md

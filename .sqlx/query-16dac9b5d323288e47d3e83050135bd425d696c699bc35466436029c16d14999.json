@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE albums SET cover_path = NULL WHERE cover_track_id IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "16dac9b5d323288e47d3e83050135bd425d696c699bc35466436029c16d14999"
+}

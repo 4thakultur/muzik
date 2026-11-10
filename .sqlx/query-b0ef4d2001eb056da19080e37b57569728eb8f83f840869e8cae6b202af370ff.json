@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT path, mtime, mime, codec, lossless AS \"lossless: bool\", bitrate_kbps\n           FROM tracks WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "path",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "mtime",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "mime",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "codec",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "lossless: bool",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "bitrate_kbps",
+        "ordinal": 5,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "b0ef4d2001eb056da19080e37b57569728eb8f83f840869e8cae6b202af370ff"
+}

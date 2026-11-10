@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO tracks (path, size, mtime, album_id, artist_name, title, disc_no, track_no,\n                               year, genre, duration_ms, codec, mime, sample_rate, bit_depth,\n                               channels, bitrate_kbps, lossless, has_embedded_cover)\n           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n           ON CONFLICT(path) DO UPDATE SET\n             size = excluded.size, mtime = excluded.mtime, album_id = excluded.album_id,\n             artist_name = excluded.artist_name, title = excluded.title,\n             disc_no = excluded.disc_no, track_no = excluded.track_no, year = excluded.year,\n             genre = excluded.genre, duration_ms = excluded.duration_ms, codec = excluded.codec,\n             mime = excluded.mime, sample_rate = excluded.sample_rate,\n             bit_depth = excluded.bit_depth, channels = excluded.channels,\n             bitrate_kbps = excluded.bitrate_kbps, lossless = excluded.lossless,\n             has_embedded_cover = excluded.has_embedded_cover",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 19
+    },
+    "nullable": []
+  },
+  "hash": "0bd87b4e3320bfb24b60c846b7dd101a86256c749083cf37284af021f845a10b"
+}

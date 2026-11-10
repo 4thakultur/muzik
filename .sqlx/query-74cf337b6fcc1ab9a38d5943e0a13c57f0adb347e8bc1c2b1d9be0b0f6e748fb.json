@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM login_challenges WHERE expires_at <= ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "74cf337b6fcc1ab9a38d5943e0a13c57f0adb347e8bc1c2b1d9be0b0f6e748fb"
+}

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT 1 AS \"x!: i64\" FROM tracks WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "x!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "409c796b7f3836b0f6d0b5bbe57315fe2d3ad184449a4d9f8b0f3b257482b026"
+}

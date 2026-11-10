@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE server_settings SET inkult_enabled = ?, inkult_url = ? WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "282f26683fa762a01c6d90f42054935f3254568c36f8287d20ff31405d1ae614"
+}

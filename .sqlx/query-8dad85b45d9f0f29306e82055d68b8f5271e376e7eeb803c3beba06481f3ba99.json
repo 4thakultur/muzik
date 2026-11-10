@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id AS \"id!\", t.title, t.artist_name, al.title AS album_title, t.duration_ms\n           FROM json_each(?) j\n           JOIN tracks t ON t.id = j.value\n           JOIN albums al ON al.id = t.album_id\n           ORDER BY j.key",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "artist_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_title",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "duration_ms",
+        "ordinal": 4,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8dad85b45d9f0f29306e82055d68b8f5271e376e7eeb803c3beba06481f3ba99"
+}

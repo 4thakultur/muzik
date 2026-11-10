@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT (totp_required <> 0 OR (SELECT require_totp FROM server_settings WHERE id = 1) <> 0)\n             AS \"enforced!: bool\"\n           FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "enforced!: bool",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ebb088f610bddf4392aae561756b6621273ee5d074172e75b9d1edb57f5f0c15"
+}

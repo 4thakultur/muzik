@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT totp_secret IS NOT NULL AS \"enabled!: bool\", totp_enabled_at,\n                  (SELECT COUNT(*) FROM recovery_codes rc\n                    WHERE rc.user_id = users.id AND rc.used_at IS NULL) AS \"left!: i64\"\n           FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "enabled!: bool",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "totp_enabled_at",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "left!: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "9da528517661dbdad85fbc314686e30d2dc82f5696b9c21dd93580a851395bf1"
+}

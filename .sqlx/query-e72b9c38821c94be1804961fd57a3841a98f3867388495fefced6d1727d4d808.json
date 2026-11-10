@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", password_hash, disabled AS \"disabled: bool\",\n                  totp_secret IS NOT NULL AS \"totp!: bool\",\n                  auth_provider = 'inkult' AS \"inkult!: bool\"\n           FROM users WHERE username = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "password_hash",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "disabled: bool",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "totp!: bool",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "inkult!: bool",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "e72b9c38821c94be1804961fd57a3841a98f3867388495fefced6d1727d4d808"
+}

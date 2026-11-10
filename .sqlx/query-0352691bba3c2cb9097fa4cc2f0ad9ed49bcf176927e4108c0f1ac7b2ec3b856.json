@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE playlists SET name = COALESCE(?, name), description = COALESCE(?, description),\n                public = ?, collaborative = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "0352691bba3c2cb9097fa4cc2f0ad9ed49bcf176927e4108c0f1ac7b2ec3b856"
+}

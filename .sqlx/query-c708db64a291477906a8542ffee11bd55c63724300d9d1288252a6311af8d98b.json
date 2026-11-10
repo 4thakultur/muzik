@@ -1,0 +1,104 @@
+{
+  "db_name": "SQLite",
+  "query": "WITH seed AS (\n               SELECT t.genre, t.year, t.album_id, al.artist_id\n               FROM tracks t JOIN albums al ON al.id = t.album_id\n               WHERE t.id = ?\n           )\n           SELECT t.id AS \"id!\", t.title, t.artist_name, t.album_id, al.title AS album_title,\n                  al.artist_id AS album_artist_id, t.disc_no, t.track_no, t.duration_ms, t.codec,\n                  t.sample_rate, t.bit_depth, t.channels, t.bitrate_kbps,\n                  t.lossless AS \"lossless: bool\"\n           FROM tracks t JOIN albums al ON al.id = t.album_id, seed s\n           WHERE t.album_id != s.album_id\n           ORDER BY\n               (CASE WHEN s.genre IS NOT NULL AND t.genre = s.genre COLLATE NOCASE THEN 3 ELSE 0 END)\n             + (CASE WHEN al.artist_id = s.artist_id THEN 2 ELSE 0 END)\n             + (CASE WHEN s.year IS NOT NULL AND abs(t.year - s.year) <= 5 THEN 1 ELSE 0 END) DESC,\n               random()\n           LIMIT ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "artist_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_id",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "album_title",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_artist_id",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "disc_no",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "track_no",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "duration_ms",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "codec",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "sample_rate",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "bit_depth",
+        "ordinal": 11,
+        "type_info": "Integer"
+      },
+      {
+        "name": "channels",
+        "ordinal": 12,
+        "type_info": "Integer"
+      },
+      {
+        "name": "bitrate_kbps",
+        "ordinal": 13,
+        "type_info": "Integer"
+      },
+      {
+        "name": "lossless: bool",
+        "ordinal": 14,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "c708db64a291477906a8542ffee11bd55c63724300d9d1288252a6311af8d98b"
+}

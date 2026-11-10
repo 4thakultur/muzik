@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT ar.id AS \"id!\", ar.name,\n                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id) AS \"album_count!: i64\"\n           FROM search_fts f JOIN artists ar ON ar.id = f.ref_id\n           WHERE search_fts MATCH ? AND f.kind = 'artist'\n           ORDER BY f.rank LIMIT ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1c8c4ddcb35dd4f09820609de1b1113e762b2851763f8f70a883647d0617fe14"
+}

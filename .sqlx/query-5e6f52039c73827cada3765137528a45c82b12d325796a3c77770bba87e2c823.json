@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM login_challenges WHERE user_id = ? AND id NOT IN\n               (SELECT id FROM login_challenges WHERE user_id = ?\n                ORDER BY created_at DESC, rowid DESC LIMIT ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "5e6f52039c73827cada3765137528a45c82b12d325796a3c77770bba87e2c823"
+}

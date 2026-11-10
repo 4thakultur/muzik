@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT totp_pending_secret, totp_pending_at FROM users WHERE id = ? AND totp_secret IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "totp_pending_secret",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "totp_pending_at",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "f14d63cd0743f1b4153d1e1888a69f74b41ff8454d87ae9d273e5d796fb5fb07"
+}

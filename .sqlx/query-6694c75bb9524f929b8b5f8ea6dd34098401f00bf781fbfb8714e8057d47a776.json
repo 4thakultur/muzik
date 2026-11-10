@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT ar.id AS \"id!\", ar.name,\n                  (SELECT COUNT(*) FROM albums al WHERE al.artist_id = ar.id) AS \"album_count!: i64\"\n           FROM artists ar WHERE ar.id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6694c75bb9524f929b8b5f8ea6dd34098401f00bf781fbfb8714e8057d47a776"
+}

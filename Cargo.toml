@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = ["crates/muzik-common", "crates/muzik-server", "crates/muzik-web"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+license = "AGPL-3.0-or-later"
+
+[workspace.dependencies]
+muzik-common = { path = "crates/muzik-common" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Keep the WASM bundle small.
+[profile.release.package.muzik-web]
+opt-level = "z"

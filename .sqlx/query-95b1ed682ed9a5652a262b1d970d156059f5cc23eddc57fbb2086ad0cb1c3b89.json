@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM login_challenges WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "95b1ed682ed9a5652a262b1d970d156059f5cc23eddc57fbb2086ad0cb1c3b89"
+}

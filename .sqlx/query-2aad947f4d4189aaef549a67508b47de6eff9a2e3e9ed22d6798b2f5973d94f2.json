@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO playlists (owner_id, name, description, public, collaborative, created_at, updated_at)\n           VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "2aad947f4d4189aaef549a67508b47de6eff9a2e3e9ed22d6798b2f5973d94f2"
+}

@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT al.id AS \"id!\", al.title AS \"title!\", al.artist_id AS \"artist_id!\", ar.name AS \"artist_name!\", al.year,\n                  COUNT(t.id) AS \"track_count!: i64\",\n                  COALESCE(SUM(t.duration_ms), 0) AS \"duration_ms!: i64\",\n                  (al.cover_track_id IS NOT NULL OR al.cover_path IS NOT NULL) AS \"has_cover!: bool\"\n           FROM albums al\n           JOIN artists ar ON ar.id = al.artist_id\n           JOIN tracks t ON t.album_id = al.id\n           WHERE al.artist_id = ?\n           GROUP BY al.id\n           ORDER BY al.year DESC, al.title",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "title!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "artist_id!",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "artist_name!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "year",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "track_count!: i64",
+        "ordinal": 5,
+        "type_info": "Null"
+      },
+      {
+        "name": "duration_ms!: i64",
+        "ordinal": 6,
+        "type_info": "Null"
+      },
+      {
+        "name": "has_cover!: bool",
+        "ordinal": 7,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3fffe3086f113a30db1818e77228d21b916d5cea23d4aaa3bac179367df7fc4b"
+}

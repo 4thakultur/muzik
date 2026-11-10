@@ -1,0 +1,35 @@
+# Rust build output
+/target
+**/*.rs.bk
+
+# Built web UI (trunk)
+/crates/muzik-web/dist
+/dist
+
+# Local databases (dev DB for sqlx, test runs)
+/dev-data
+*.db
+*.db-shm
+*.db-wal
+*.db.bak*
+*.bak
+
+# Local test environment used by docker-compose (library, DB, avatars, cache).
+# Only the empty folder skeleton is committed.
+/music/*/*
+!/music/*/.gitkeep
+
+# Local overrides
+.env.local
+docker-compose.override.yml
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json

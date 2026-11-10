@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT owner_id, public AS \"public: bool\", collaborative AS \"collaborative: bool\"\n               FROM playlists WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "owner_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "public: bool",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "collaborative: bool",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "63e6087c452e957b4474a76661fd78246c0261119c2d6e9fc1d9e961871233c6"
+}

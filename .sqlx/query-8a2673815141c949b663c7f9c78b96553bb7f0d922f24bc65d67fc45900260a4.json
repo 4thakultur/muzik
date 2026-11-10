@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO albums (artist_id, title, year) VALUES (?, ?, ?)\n           ON CONFLICT(artist_id, title) DO UPDATE SET year = COALESCE(excluded.year, albums.year)\n           RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8a2673815141c949b663c7f9c78b96553bb7f0d922f24bc65d67fc45900260a4"
+}

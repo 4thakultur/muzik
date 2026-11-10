@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE login_challenges SET attempts = attempts + 1\n           WHERE id = ? AND expires_at > ?\n           RETURNING user_id AS \"user_id!\", attempts AS \"attempts!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "attempts!",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8920b1f010d6b6f9cf4602282f9bef5ba3b7cabc08e96cc4061dbd5580f8b637"
+}

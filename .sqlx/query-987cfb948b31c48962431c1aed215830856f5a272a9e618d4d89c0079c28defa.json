@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE playlist_tracks SET track_id = (\n             SELECT MIN(t.id) FROM tracks t JOIN albums al ON al.id = t.album_id\n             WHERE t.title = playlist_tracks.title COLLATE NOCASE\n               AND t.artist_name = playlist_tracks.artist_name COLLATE NOCASE\n               AND al.title = playlist_tracks.album_title COLLATE NOCASE)\n         WHERE track_id IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "987cfb948b31c48962431c1aed215830856f5a272a9e618d4d89c0079c28defa"
+}

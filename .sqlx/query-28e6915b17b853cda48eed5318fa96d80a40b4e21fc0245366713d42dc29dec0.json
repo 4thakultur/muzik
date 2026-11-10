@@ -1,0 +1,92 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT p.id AS \"id!\", p.name, p.description, p.owner_id, u.display_name AS owner_name,\n                  p.public AS \"public: bool\", p.collaborative AS \"collaborative: bool\",\n                  p.created_at, p.updated_at,\n                  fl.user_id IS NOT NULL AS \"following!: bool\",\n                  (SELECT COUNT(*) FROM playlist_tracks pt\n                    WHERE pt.playlist_id = p.id) AS \"track_count!: i64\",\n                  (SELECT COALESCE(SUM(pt.duration_ms), 0) FROM playlist_tracks pt\n                    WHERE pt.playlist_id = p.id AND pt.track_id IS NOT NULL) AS \"duration_ms!: i64\",\n                  (SELECT group_concat(album_id) FROM (\n                      SELECT t.album_id FROM playlist_tracks pt\n                      JOIN tracks t ON t.id = pt.track_id\n                      JOIN albums al ON al.id = t.album_id\n                      WHERE pt.playlist_id = p.id AND pt.position < 200\n                        AND (al.cover_track_id IS NOT NULL OR al.cover_path IS NOT NULL)\n                      GROUP BY t.album_id ORDER BY MIN(pt.position) LIMIT 4)) AS \"covers?: String\"\n           FROM playlists p\n           JOIN users u ON u.id = p.owner_id\n           LEFT JOIN playlist_follows fl ON fl.playlist_id = p.id AND fl.user_id = ?1\n           WHERE CASE ?2\n               WHEN 'library' THEN p.owner_id = ?1 OR (fl.user_id IS NOT NULL AND p.public = 1)\n               WHEN 'one' THEN p.id = ?3 AND (p.owner_id = ?1 OR p.public = 1)\n               WHEN 'shared' THEN p.public = 1 AND p.owner_id <> ?1\n               ELSE (p.owner_id = ?1 OR p.public = 1) AND p.name LIKE ?4 ESCAPE '\\'\n           END\n           ORDER BY MAX(p.updated_at, COALESCE(fl.created_at, 0)) DESC, p.id DESC\n           LIMIT ?5",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "owner_id",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "owner_name",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "public: bool",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "collaborative: bool",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "following!: bool",
+        "ordinal": 9,
+        "type_info": "Integer"
+      },
+      {
+        "name": "track_count!: i64",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "duration_ms!: i64",
+        "ordinal": 11,
+        "type_info": "Integer"
+      },
+      {
+        "name": "covers?: String",
+        "ordinal": 12,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "28e6915b17b853cda48eed5318fa96d80a40b4e21fc0245366713d42dc29dec0"
+}

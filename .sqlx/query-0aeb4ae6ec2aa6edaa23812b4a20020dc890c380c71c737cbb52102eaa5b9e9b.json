@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT track_id AS \"id!\" FROM playlist_tracks\n               WHERE playlist_id = ? AND track_id IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "0aeb4ae6ec2aa6edaa23812b4a20020dc890c380c71c737cbb52102eaa5b9e9b"
+}

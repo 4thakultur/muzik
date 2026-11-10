@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM tracks WHERE path = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "97c46cce2e3fcebdb5da70183d87d4013df2de6e0e3c46463d9a3c4f31ac9e7c"
+}

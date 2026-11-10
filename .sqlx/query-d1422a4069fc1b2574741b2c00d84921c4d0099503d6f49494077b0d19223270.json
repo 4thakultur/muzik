@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM albums WHERE id NOT IN (SELECT DISTINCT album_id FROM tracks)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "d1422a4069fc1b2574741b2c00d84921c4d0099503d6f49494077b0d19223270"
+}

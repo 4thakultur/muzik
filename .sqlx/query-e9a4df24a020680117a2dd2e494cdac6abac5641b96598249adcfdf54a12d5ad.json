@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO search_fts (kind, ref_id, text) SELECT 'artist', id, name FROM artists",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "e9a4df24a020680117a2dd2e494cdac6abac5641b96598249adcfdf54a12d5ad"
+}

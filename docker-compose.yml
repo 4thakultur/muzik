@@ -1,0 +1,43 @@
+services:
+  muzik:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: muzik:latest
+    container_name: muzik
+    restart: unless-stopped
+    ports:
+      - "9873:9873"
+    environment:
+      MUZIK_LIBRARY_PATHS: /music
+      MUZIK_SCAN_INTERVAL: 6h
+      MUZIK_CACHE_MAX_SIZE: 10G
+      # Set to "false" only if you access Muzik over plain HTTP (no reverse proxy with TLS).
+      MUZIK_SECURE_COOKIES: "true"
+      # Behind a reverse proxy, list its address(es) so the real client IP is
+      # used for login rate limiting and auth logs, e.g. "172.16.0.0/12".
+      # Leave empty when clients connect directly: X-Forwarded-For is then ignored.
+      MUZIK_TRUSTED_PROXIES: ""
+    # Optional: Inkult sign-in (Settings > Inkult, off by default). To reach an
+    # Inkult container by name, put both on a shared network and, on Inkult,
+    # set INKULT_ALLOWED_HOSTS=inkult (it refuses unknown host names) and list
+    # Muzik's address in INKULT_TRUSTED_PROXIES so its sign-in limits apply per
+    # real client rather than to Muzik as a whole. To read Inkult's downloads,
+    # mount Inkult's music folder (read-only) as the library above.
+    volumes:
+      # Testing layout: everything lives under ./music on the host.
+      #   ./music/library  -> audio files (ALWAYS mounted read-only)
+      #   ./music/data     -> SQLite DB, avatars
+      #   ./music/cache    -> transcodes, thumbnails
+      # The container runs as uid/gid 1000; data/ and cache/ must be writable by it.
+      - ./music/library:/music:ro
+      - ./music/data:/data
+      - ./music/cache:/cache
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT created_at FROM sessions WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "created_at",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b23d6f1db4032e836840c02b5d29451f7c9d4f812ca95f533d39d22942232221"
+}

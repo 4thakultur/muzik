@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT al.cover_path, t.path AS \"track_path?\", t.mtime AS \"track_mtime?\"\n           FROM albums al LEFT JOIN tracks t ON t.id = al.cover_track_id\n           WHERE al.id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "cover_path",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "track_path?",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "track_mtime?",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "359d45f693b13d9d46ff39a4bd74304c89a32d35414cd81f732cae8852f08ac3"
+}

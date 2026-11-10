@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", auth_provider = 'inkult' AS \"inkult!: bool\", inkult_user_id\n           FROM users WHERE username = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inkult!: bool",
+        "ordinal": 1,
+        "type_info": "Null"
+      },
+      {
+        "name": "inkult_user_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      null,
+      true
+    ]
+  },
+  "hash": "73e249220c17d5d3896471e8db250464c0a838bd1b3bfcaae3473003edb3cf03"
+}

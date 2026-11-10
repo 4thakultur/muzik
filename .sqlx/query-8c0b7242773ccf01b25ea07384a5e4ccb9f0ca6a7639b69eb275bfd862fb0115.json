@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT a.id AS \"id!\", MIN(t.path) AS \"path!: String\"\n           FROM albums a JOIN tracks t ON t.album_id = a.id\n           WHERE a.cover_track_id IS NULL\n           GROUP BY a.id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "path!: String",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "8c0b7242773ccf01b25ea07384a5e4ccb9f0ca6a7639b69eb275bfd862fb0115"
+}

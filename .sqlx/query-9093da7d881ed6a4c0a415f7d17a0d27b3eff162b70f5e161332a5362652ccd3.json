@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE users SET inkult_two_factor = ?\n           WHERE inkult_user_id = ? AND auth_provider = 'inkult' RETURNING id AS \"id!\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "9093da7d881ed6a4c0a415f7d17a0d27b3eff162b70f5e161332a5362652ccd3"
+}

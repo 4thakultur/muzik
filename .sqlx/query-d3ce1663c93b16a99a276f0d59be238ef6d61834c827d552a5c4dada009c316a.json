@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO login_challenges (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "d3ce1663c93b16a99a276f0d59be238ef6d61834c827d552a5c4dada009c316a"
+}

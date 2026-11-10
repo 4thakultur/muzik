@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT path, size, mtime FROM tracks",
+  "describe": {
+    "columns": [
+      {
+        "name": "path",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "size",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "mtime",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d153cd2c2e1c94d39863414137932d30babc38b6512552a3fa17c5e64aac82c7"
+}

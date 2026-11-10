@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT position FROM playlist_tracks WHERE id = ? AND playlist_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "position",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "167f58ba92efe3022eec04e2fe575f8b76a7cbf76fc614be2381219e2b93e6da"
+}

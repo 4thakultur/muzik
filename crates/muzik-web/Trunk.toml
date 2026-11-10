@@ -1,0 +1,17 @@
+[build]
+target = "index.html"
+dist = "dist"
+public_url = "/"
+
+# The server's CSP forbids inline scripts, so move trunk's inline loader into a file.
+[[hooks]]
+stage = "post_build"
+command = "sh"
+command_arguments = ["scripts/extract-loader.sh"]
+
+# `trunk serve` (port 8080) proxies the API to a locally running muzik-server.
+[serve]
+port = 8080
+
+[[proxy]]
+backend = "http://127.0.0.1:9873/api/"
