@@ -18,15 +18,17 @@ services:
       # used for login rate limiting and auth logs, e.g. "172.16.0.0/12".
       # Leave empty when clients connect directly: X-Forwarded-For is then ignored.
       MUZIK_TRUSTED_PROXIES: ""
+      # Optional: separate libraries per Inkult user (Settings > Inkult).
+      # Uncomment together with the /inkult volume below.
+      # MUZIK_INKULT_LIBRARY: /inkult/library.json
+      # Only if Inkult's music folder is not the first library path (/music):
+      # MUZIK_INKULT_MUSIC_DIR: /music
     # Optional: Inkult sign-in (Settings > Inkult, off by default). To reach an
     # Inkult container by name, put both on a shared network and, on Inkult,
     # set INKULT_ALLOWED_HOSTS=inkult (it refuses unknown host names) and list
     # Muzik's address in INKULT_TRUSTED_PROXIES so its sign-in limits apply per
     # real client rather than to Muzik as a whole. To read Inkult's downloads,
     # mount Inkult's music folder (read-only) as the library above.
-    # Separate libraries per Inkult user (Settings > Inkult) also need Inkult's
-    # data folder, read-only, and MUZIK_INKULT_LIBRARY=/inkult/library.json
-    # (see README, "Separate libraries per Inkult user").
     volumes:
       # Testing layout: everything lives under ./music on the host.
       #   ./music/library  -> audio files (ALWAYS mounted read-only)
@@ -36,6 +38,13 @@ services:
       - ./music/library:/music:ro
       - ./music/data:/data
       - ./music/cache:/cache
+      # Separate libraries per Inkult user: Inkult's data folder, read-only.
+      # Mount the folder, not library.json alone (Inkult replaces the file on
+      # each save; a single-file mount would keep showing the old copy). It
+      # also holds Inkult's credentials (owner-only files): run Muzik under a
+      # different uid than Inkult's PUID to keep them unreadable.
+      # See README, "Separate libraries per Inkult user".
+      # - /path/to/inkult/data:/inkult:ro
     read_only: true
     tmpfs:
       - /tmp
