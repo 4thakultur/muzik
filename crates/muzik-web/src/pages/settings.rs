@@ -9,6 +9,7 @@ use wasm_bindgen::{prelude::Closure, JsCast};
 
 use crate::{
     api,
+    collection::use_collection,
     components::{use_toasts, Monogram},
     icons::{Icon, Svg},
     overlays::{use_overlays, Overlay, Picker},
@@ -119,6 +120,9 @@ fn AppearanceGroup() -> impl IntoView {
 #[component]
 pub fn Settings() -> impl IntoView {
     let auth = use_auth();
+    // Memo: the group must not remount on every update of the signed-in user.
+    let can_choose_library =
+        Memo::new(move |_| auth.user().is_some_and(|u| u.own_library.is_some()));
     let logout = move |_| {
         spawn_local(async move {
             let _ = api::logout().await;
@@ -165,6 +169,8 @@ pub fn Settings() -> impl IntoView {
                 view! { <SecurityGroup/> }.into_any()
             }}
 
+            {move || can_choose_library.get().then(|| view! { <OwnLibraryGroup/> })}
+
             <AppearanceGroup/>
 
             <h3 class="group-header">"Streaming Quality"</h3>
@@ -193,6 +199,53 @@ pub fn Settings() -> impl IntoView {
                 <button class="cell action destructive" on:click=logout>"Sign Out"</button>
             </div>
         </div>
+    }
+}
+
+/// Inkult captains, while the server separates libraries: hear everything
+/// (the default) or only the songs they own in Inkult.
+#[component]
+fn OwnLibraryGroup() -> impl IntoView {
+    let auth = use_auth();
+    let toasts = use_toasts();
+    let collection = use_collection();
+    let busy = RwSignal::new(false);
+    let own = move || auth.user().and_then(|u| u.own_library).unwrap_or(false);
+    let toggle = move |ev: leptos::ev::MouseEvent| {
+        ev.prevent_default();
+        let on = !own();
+        busy.set(true);
+        spawn_local(async move {
+            match api::set_own_library(on).await {
+                Ok(u) => {
+                    auth.0.set(AuthState::In(u));
+                    // Playlist covers and availability depend on the library.
+                    collection.refresh();
+                    toasts.show(if on {
+                        "You now hear only your own songs"
+                    } else {
+                        "You now hear the whole library"
+                    });
+                }
+                Err(e) => toasts.show(e.message),
+            }
+            busy.set(false);
+        });
+    };
+    view! {
+        <h3 class="group-header">"Library"</h3>
+        <div class="group">
+            <label class="cell"><span class="cell-label">"Only My Songs"</span>
+                <input class="switch" type="checkbox" role="switch"
+                    disabled=move || busy.get()
+                    prop:checked=own
+                    on:click=toggle/></label>
+        </div>
+        <p class="group-footer">
+            "Each Inkult user hears only the songs they own in Inkult. As a captain you hear the whole "
+            "library, unless you turn this on: then you hear your own songs, plus songs added to the "
+            "music folder by hand."
+        </p>
     }
 }
 
@@ -662,20 +715,14 @@ fn UsersPanel() -> impl IntoView {
     let password = RwSignal::new(String::new());
     let is_admin = RwSignal::new(false);
     let require_2fa = RwSignal::new(false);
-    let via_inkult = RwSignal::new(false);
     let create = move |ev: SubmitEvent| {
         ev.prevent_default();
         let d = display.get_untracked();
-        let inkult = via_inkult.get_untracked();
         let req = CreateUserRequest {
             username: username.get_untracked(),
             display_name: (!d.trim().is_empty()).then_some(d),
-            password: if inkult {
-                String::new()
-            } else {
-                password.get_untracked()
-            },
-            inkult,
+            password: password.get_untracked(),
+            inkult: false,
             is_admin: is_admin.get_untracked(),
             totp_required: require_2fa.get_untracked(),
         };
@@ -688,7 +735,6 @@ fn UsersPanel() -> impl IntoView {
                     password.set(String::new());
                     is_admin.set(false);
                     require_2fa.set(false);
-                    via_inkult.set(false);
                     reload();
                 }
                 Err(e) => toasts.show(e.message),
@@ -910,12 +956,8 @@ fn UsersPanel() -> impl IntoView {
                 <input class="cell-input" type="text" autocomplete="off" autocapitalize="none" placeholder="Required" required bind:value=username/></label>
             <label class="cell"><span class="cell-label">"Display Name"</span>
                 <input class="cell-input" type="text" autocomplete="off" placeholder="Optional" bind:value=display/></label>
-            <label class="cell"><span class="cell-label">"Sign In with Inkult"</span>
-                <input class="switch" type="checkbox" role="switch" bind:checked=via_inkult/></label>
-            {move || (!via_inkult.get()).then(|| view! {
-                <label class="cell"><span class="cell-label">"Password"</span>
-                    <input class="cell-input" type="password" autocomplete="new-password" placeholder="Required" required bind:value=password/></label>
-            })}
+            <label class="cell"><span class="cell-label">"Password"</span>
+                <input class="cell-input" type="password" autocomplete="new-password" placeholder="Required" required bind:value=password/></label>
             <label class="cell"><span class="cell-label">"Administrator"</span>
                 <input class="switch" type="checkbox" role="switch" bind:checked=is_admin/></label>
             {move || (!required_for_all()).then(|| view! {
@@ -924,13 +966,7 @@ fn UsersPanel() -> impl IntoView {
             })}
             <button class="cell action" type="submit">"Create User"</button>
         </form>
-        <p class="group-footer">
-            {move || if via_inkult.get() {
-                "Inkult users get their account at their first sign-in. Add one here only to set it up beforehand, e.g. as an administrator: use their Inkult handle as the username."
-            } else {
-                "They can change their password from Settings once signed in."
-            }}
-        </p>
+        <p class="group-footer">"They can change their password from Settings once signed in."</p>
     }
 }
 
@@ -1093,6 +1129,10 @@ fn InkultPanel() -> impl IntoView {
             match api::set_inkult_libraries(on).await {
                 Ok(s) => {
                     show(s);
+                    // An admin who is also an Inkult captain gets the choice.
+                    if let Ok(u) = api::me().await {
+                        auth.0.set(AuthState::In(u));
+                    }
                     toasts.show(if on {
                         "Each Inkult user now hears only their own songs"
                     } else {
@@ -1180,7 +1220,8 @@ fn InkultPanel() -> impl IntoView {
         <p class="group-footer">
             {move || if index().is_some() {
                 "When on, each Inkult user only hears the songs they own in Inkult, plus songs added to the \
-                 music folder by hand. Inkult captains, Muzik admins and accounts with a Muzik password hear everything."
+                 music folder by hand. Muzik admins and accounts with a Muzik password hear everything; Inkult \
+                 captains too, unless they choose Only My Songs in their Settings."
             } else {
                 "Needs Inkult's library.json: mount Inkult's data folder read-only and set MUZIK_INKULT_LIBRARY."
             }}

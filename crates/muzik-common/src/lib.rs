@@ -52,6 +52,19 @@ pub struct User {
     /// at its last sign-in).
     #[serde(default)]
     pub inkult: bool,
+    /// Separate libraries: `Some(only_mine)` for an Inkult captain while the
+    /// server separates libraries, who chooses between hearing everything
+    /// (`false`) or only the songs they own in Inkult (`true`, see
+    /// [`UpdateOwnLibrary`]). `None` when there is nothing to choose.
+    #[serde(default)]
+    pub own_library: Option<bool>,
+}
+
+/// `PUT /api/me/library` (Inkult captains, while libraries are separate).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateOwnLibrary {
+    /// Only hear the songs you own in Inkult, plus songs added by hand.
+    pub own_library: bool,
 }
 
 impl User {

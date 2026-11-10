@@ -27,7 +27,10 @@ pub async fn list(State(state): State<AppState>, _admin: AdminUser) -> ApiResult
                   totp_required AS "totp_required: bool",
                   (totp_required <> 0 OR (SELECT require_totp FROM server_settings WHERE id = 1) <> 0)
                     AS "totp_enforced!: bool",
-                  auth_provider = 'inkult' AS "inkult!: bool"
+                  auth_provider = 'inkult' AS "inkult!: bool",
+                  CASE WHEN auth_provider = 'inkult' AND inkult_captain <> 0
+                            AND (SELECT inkult_separate_libraries FROM server_settings WHERE id = 1) <> 0
+                       THEN inkult_own_library <> 0 END AS "own_library?: bool"
            FROM users ORDER BY username"#
     )
     .fetch_all(&state.pool)

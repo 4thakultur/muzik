@@ -156,7 +156,8 @@ pub struct CurrentUser {
     pub inkult: bool,
     /// Separate libraries: the Inkult account id whose songs this user may
     /// see (plus songs not in Inkult's index). `None` = the whole library:
-    /// separation off, a local account, a Muzik admin or an Inkult captain.
+    /// separation off, a local account, a Muzik admin, or an Inkult captain
+    /// who didn't choose to only hear their own songs.
     /// Every library query passes it to its ownership predicate.
     pub library_owner: Option<i64>,
 }
@@ -181,7 +182,10 @@ impl CurrentUser {
                         OR (SELECT require_totp FROM server_settings WHERE id = 1) <> 0))
                         AS "totp_setup_pending!: bool",
                       -- -1 (owns nothing) for an Inkult account not linked yet.
-                      CASE WHEN u.auth_provider = 'inkult' AND u.is_admin = 0 AND u.inkult_captain = 0
+                      -- Captains (and admins among them) only when they chose to.
+                      CASE WHEN u.auth_provider = 'inkult'
+                                AND ((u.is_admin = 0 AND u.inkult_captain = 0)
+                                     OR (u.inkult_captain <> 0 AND u.inkult_own_library <> 0))
                                 AND (SELECT inkult_separate_libraries FROM server_settings WHERE id = 1) <> 0
                            THEN COALESCE(u.inkult_user_id, -1) END AS "library_owner?: i64"
                FROM sessions s JOIN users u ON u.id = s.user_id

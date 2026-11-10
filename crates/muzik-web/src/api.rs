@@ -200,6 +200,16 @@ pub async fn set_inkult_settings(settings: &UpdateInkultSettings) -> ApiResult<I
     send_json("PUT", "/api/admin/inkult", settings).await
 }
 
+/// Inkult captain: only hear your own songs while libraries are separate.
+pub async fn set_own_library(own_library: bool) -> ApiResult<User> {
+    send_json(
+        "PUT",
+        "/api/me/library",
+        &muzik_common::UpdateOwnLibrary { own_library },
+    )
+    .await
+}
+
 /// Turns separate libraries per Inkult account on or off.
 pub async fn set_inkult_libraries(separate: bool) -> ApiResult<InkultSettings> {
     send_json(

@@ -7,7 +7,7 @@ use axum_extra::extract::CookieJar;
 use muzik_common::{
     ChangePasswordRequest, LoginRequest, LoginResponse, MfaLoginRequest, RecoveryCodes,
     SetupRequest, SetupStatus, TotpConfirmRequest, TotpEnableRequest, TotpSetup, TotpSetupRequest,
-    TotpStatus, User,
+    TotpStatus, UpdateOwnLibrary, User,
 };
 
 use super::extract::Json as JsonBody;
@@ -78,7 +78,10 @@ pub async fn fetch_user(pool: &sqlx::SqlitePool, id: i64) -> ApiResult<User> {
                   totp_required AS "totp_required: bool",
                   (totp_required <> 0 OR (SELECT require_totp FROM server_settings WHERE id = 1) <> 0)
                     AS "totp_enforced!: bool",
-                  auth_provider = 'inkult' AS "inkult!: bool"
+                  auth_provider = 'inkult' AS "inkult!: bool",
+                  CASE WHEN auth_provider = 'inkult' AND inkult_captain <> 0
+                            AND (SELECT inkult_separate_libraries FROM server_settings WHERE id = 1) <> 0
+                       THEN inkult_own_library <> 0 END AS "own_library?: bool"
            FROM users WHERE id = ?"#,
         id
     )
@@ -681,6 +684,30 @@ pub async fn me(
     State(state): State<AppState>,
     SessionUser(user): SessionUser,
 ) -> ApiResult<Json<User>> {
+    Ok(Json(fetch_user(&state.pool, user.id).await?))
+}
+
+/// `PUT /api/me/library`: an Inkult captain chooses, while libraries are
+/// separate, between hearing everything or only the songs they own.
+pub async fn set_own_library(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    JsonBody(req): JsonBody<UpdateOwnLibrary>,
+) -> ApiResult<Json<User>> {
+    let current = fetch_user(&state.pool, user.id).await?;
+    if current.own_library.is_none() {
+        return Err(AppError::BadRequest(
+            "only Inkult captains choose their library, while libraries are separate".into(),
+        ));
+    }
+    sqlx::query!(
+        "UPDATE users SET inkult_own_library = ? WHERE id = ?",
+        req.own_library,
+        user.id
+    )
+    .execute(&state.pool)
+    .await?;
+    tracing::info!(target: "auth", event = "own_library_changed", user_id = user.id, own_library = req.own_library, "captain library choice changed");
     Ok(Json(fetch_user(&state.pool, user.id).await?))
 }
 

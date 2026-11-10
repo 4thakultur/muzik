@@ -27,6 +27,7 @@ pub fn router() -> Router<AppState> {
         .route("/auth/login/2fa", post(auth::login_2fa))
         .route("/auth/logout", post(auth::logout))
         .route("/me", get(auth::me))
+        .route("/me/library", put(auth::set_own_library))
         .route("/me/password", post(auth::change_password))
         .route("/me/2fa", get(auth::totp_status))
         .route("/me/2fa/setup", post(auth::totp_setup))

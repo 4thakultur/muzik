@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id!\", username, display_name, is_admin AS \"is_admin: bool\",\n                  disabled AS \"disabled: bool\", avatar_file IS NOT NULL AS \"has_avatar!: bool\",\n                  (CASE WHEN auth_provider = 'inkult' THEN inkult_two_factor <> 0\n                        ELSE totp_secret IS NOT NULL END) AS \"totp_enabled!: bool\",\n                  totp_required AS \"totp_required: bool\",\n                  (totp_required <> 0 OR (SELECT require_totp FROM server_settings WHERE id = 1) <> 0)\n                    AS \"totp_enforced!: bool\",\n                  auth_provider = 'inkult' AS \"inkult!: bool\"\n           FROM users WHERE id = ?",
+  "query": "SELECT id AS \"id!\", username, display_name, is_admin AS \"is_admin: bool\",\n                  disabled AS \"disabled: bool\", avatar_file IS NOT NULL AS \"has_avatar!: bool\",\n                  (CASE WHEN auth_provider = 'inkult' THEN inkult_two_factor <> 0\n                        ELSE totp_secret IS NOT NULL END) AS \"totp_enabled!: bool\",\n                  totp_required AS \"totp_required: bool\",\n                  (totp_required <> 0 OR (SELECT require_totp FROM server_settings WHERE id = 1) <> 0)\n                    AS \"totp_enforced!: bool\",\n                  auth_provider = 'inkult' AS \"inkult!: bool\",\n                  CASE WHEN auth_provider = 'inkult' AND inkult_captain <> 0\n                            AND (SELECT inkult_separate_libraries FROM server_settings WHERE id = 1) <> 0\n                       THEN inkult_own_library <> 0 END AS \"own_library?: bool\"\n           FROM users WHERE id = ?",
   "describe": {
     "columns": [
       {
@@ -52,6 +52,11 @@
         "name": "inkult!: bool",
         "ordinal": 9,
         "type_info": "Integer"
+      },
+      {
+        "name": "own_library?: bool",
+        "ordinal": 10,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -67,8 +72,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "129de6cbca6252b3ba5bc8a8dc386d4d79cdef512393526ec4c63af68cd91724"
+  "hash": "97f4ace800f17537946551d9c4f015e5d436a3f55b2a3ff8f14e773d9dc73fba"
 }

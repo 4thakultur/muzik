@@ -1935,6 +1935,43 @@ async fn separate_inkult_libraries() {
     assert_eq!(visible(captain.clone()).await, everything);
     assert_eq!(visible(admin.clone()).await, everything);
 
+    // Captains choose: everything by default, or only their own songs (the
+    // quartermaster owns none, so only the hand-added one). Nobody else can.
+    let own_library = |cookie: String, on: bool| {
+        let t = &t;
+        async move {
+            let res = t
+                .request(
+                    "PUT",
+                    "/api/me/library",
+                    Some(&cookie),
+                    Some(json!({ "own_library": on })),
+                    &[],
+                )
+                .await;
+            (res.status(), body_json(res).await)
+        }
+    };
+    let me: Value = t.json("/api/me", &captain).await;
+    assert_eq!(me["own_library"], false);
+    let me: Value = t.json("/api/me", &pirate).await;
+    assert!(me["own_library"].is_null());
+    assert_eq!(
+        own_library(pirate.clone(), true).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        own_library(admin.clone(), true).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    let (s, body) = own_library(captain.clone(), true).await;
+    assert_eq!(s, StatusCode::OK, "{body}");
+    assert_eq!(body["own_library"], true);
+    assert_eq!(visible(captain.clone()).await, ["03 Untagged"]);
+    let (s, _) = own_library(captain.clone(), false).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(visible(captain.clone()).await, everything);
+
     // Someone else's song: not streamable, not found, not searchable.
     let status = |uri: String, cookie: String| {
         let t = &t;
