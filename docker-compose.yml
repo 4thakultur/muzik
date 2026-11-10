@@ -40,4 +40,9 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    pids_limit: 256
+    # Set via deploy.resources only: some Compose versions reject `pids_limit`
+    # ("can't set distinct values on 'pids_limit' and 'deploy.resources.limits.pids'").
+    deploy:
+      resources:
+        limits:
+          pids: 256
